@@ -78,6 +78,24 @@ Before running this deployment, ensure you have:
 
     Review the execution plan in the terminal and type **`yes`** when prompted to confirm deployment.
 
+4. Retrieve the Primary API Key (Key1)
+
+```bash
+az cognitiveservices account keys list \
+  --name <your_openai_account_name> \
+  --resource-group <your_resource_group> \
+  --query "key1" -o tsv
+```
+
+5. Confirm the Public Endpoint
+
+```bash
+az cognitiveservices account show \
+  --name <your_openai_account_name> \
+  --resource-group <your_resource_group> \
+  --query "properties.endpoint" -o tsv
+  --query "key1" -o tsv
+```
 Teardown & Resource Cleanup
 
 ## To completely remove all Azure resources:
