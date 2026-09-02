@@ -78,7 +78,7 @@ Before running this deployment, ensure you have:
 
     Review the execution plan in the terminal and type **`yes`** when prompted to confirm deployment.
 
-4. Retrieve the Primary API Key (Key1)
+4. **Retrieve the Primary API Key (Key1)**
 
 ```bash
 az cognitiveservices account keys list \
@@ -87,7 +87,7 @@ az cognitiveservices account keys list \
   --query "key1" -o tsv
 ```
 
-5. Confirm the Public Endpoint
+5. **Confirm the Public Endpoint**
 
 ```bash
 az cognitiveservices account show \
