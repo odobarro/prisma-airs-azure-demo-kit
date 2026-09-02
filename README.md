@@ -1,2 +1,90 @@
-# prisma-airs-azure-demo-kit
-Turnkey Terraform setup integrating Azure OpenAI with Prisma AIRS
+# Prisma AIRS & Azure OpenAI Demo Environment
+
+An automated, enterprise-grade Infrastructure-as-Code (IaC) package using **Terraform** to deploy a serverless Azure AI environment. Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilities—including **AI Gateway**, **AI Runtime Security**, and **Prisma Model Security**
+
+---
+
+## Architecture
+
+* **Azure OpenAI Service**: Deploys `gpt-4o-mini` (version `2024-07-18`).
+* **Azure Storage Account (`Standard_LRS`)**: Dedicated Blob Storage container for static AI model vulnerability scanning (`.pkl`, `.safetensors`, `.onnx` files) via **Prisma Model Security**.
+
+
+---
+
+## Prerequisites
+
+Before running this deployment, ensure you have:
+
+1. **Azure CLI**: Installed and logged in (`az login`).
+2. **Terraform**: Version `>= 1.5.0` installed.
+3. **Git**: Installed and configured with your credentials.
+4. **Active Azure Subscription**: Permissions to create Resource Groups, Cognitive Services, and Storage Accounts.
+5. **Prisma AIRS Tenant**: Admin/Developer access to configure Portkey AI Gateway keys, Runtime Guardrails, and Idira integrations.
+
+---
+
+## Step-by-Step Deployment Guide
+
+### 1. Clone & Set Up Local Repository
+
+Clone the repository to your Mac/PC using VS Code or Git terminal:
+
+```bash
+git clone https://github.com/odobarro/prisma-airs-azure-demo-kit
+cd prisma-airs-azure-demo-kit
+
+If you are setting up the repository for the first time, commit and push your baseline files:
+
+Bash
+git config --global user.name "Your Name"
+git config --global user.email "your_email@domain.com"
+
+git add .
+git commit -m "feat: initial terraform setup for azure openai and storage"
+git push origin main
+
+### 2. Authenticate to Azure CLI
+Log in to your Azure account in your terminal:
+
+az login
+
+If you manage multiple subscriptions, select your active target:
+
+Bash
+az account set --subscription "YOUR_SUBSCRIPTION_ID_OR_NAME"
+
+### 3. Initialize & Apply Terraform
+Navigate to the terraform/ directory:
+
+cd terraform
+terraform init
+
+Execute the deployment. Terraform will prompt you interactively for environment-specific parameters:
+
+terraform apply
+
+#### Interactive Prompt Reference
+
+| Parameter | Description | Input Example |
+|---|---|---|
+| `var.azure_location` | Target Azure Region | `spaincentral` |
+| `var.resource_group_name` | Name for the Azure Resource Group | `rg-partner-prisma-demo` |
+| `var.openai_account_name` | Globally unique Azure OpenAI account name | `oai-partner-demo-001` |
+| `var.storage_account_name` | Globally unique Storage Account name (lowercase alphanumeric only, 3-24 chars) | `stgpartnerdemo001` |
+| `var.storage_container_name` | Blob container name for Prisma Model Security (Idira) scans | `ai-models-scan` |
+
+Review the plan and type yes to create the resources.
+
+Teardown & Resource Cleanup
+
+To completely remove all Azure resources:
+
+cd terraform
+terraform destroy
+
+Type yes to confirm deletion.
+
+Important Azure OpenAI Soft-Delete Notice: Azure OpenAI enforces a 48-hour soft-delete retention policy by default. If you destroy the infrastructure and run terraform apply immediately using the same openai_account_name, Azure will reject it. Use a new name or purge the deleted resource via Azure CLI:
+
+az cognitiveservices account purge --name <OPENAI_ACCOUNT_NAME> --resource-group <RESOURCE_GROUP_NAME> --location spaincentral
