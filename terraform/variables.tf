@@ -34,7 +34,7 @@ variable "storage_container_name" {
 variable "model_deployment_name" {
   type        = string
   default     = "gpt-4o-mini-demo"
-  description = "Deployment alias used by Prisma AIRS / Portkey AI Gateway"
+  description = "Deployment alias used by Prisma AIRS"
 }
 
 variable "model_name" {
@@ -45,6 +45,6 @@ variable "model_name" {
 
 variable "model_version" {
   type        = string
-  default     = "2024-07-18"
-  description = "Specific version build pinned for cost efficiency and stability"
+  default     = null
+  description = "Version of the OpenAI model"
 }
