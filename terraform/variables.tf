@@ -33,18 +33,18 @@ variable "storage_container_name" {
 
 variable "model_deployment_name" {
   type        = string
-  default     = "gpt-4o-mini-demo"
+  default     = "gpt-4.1-mini-demo"
   description = "Deployment alias used by Prisma AIRS"
 }
 
 variable "model_name" {
   type        = string
-  default     = "gpt-4o-mini"
+  default     = "gpt-4.1-mini"
   description = "Base LLM model provided by Azure OpenAI"
 }
 
 variable "model_version" {
   type        = string
-  default     = "2024-10-01"
+  default     = "2025-04-14"
   description = "Version of the OpenAI model"
 }
