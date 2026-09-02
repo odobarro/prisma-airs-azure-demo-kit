@@ -44,6 +44,8 @@ git add .
 git commit -m "feat: initial terraform setup for azure openai and storage"
 git push origin main
 
+---
+
 ### 2. Authenticate to Azure CLI
 Log in to your Azure account in your terminal:
 
@@ -53,6 +55,8 @@ If you manage multiple subscriptions, select your active target:
 
 Bash
 az account set --subscription "YOUR_SUBSCRIPTION_ID_OR_NAME"
+
+---
 
 ### 3. Initialize & Apply Terraform
 Navigate to the terraform/ directory:
