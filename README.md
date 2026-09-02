@@ -74,7 +74,7 @@ Before running this deployment, ensure you have:
     | `var.resource_group_name` | Name for the Azure Resource Group | `rg-partner-prisma-demo` |
     | `var.openai_account_name` | Globally unique Azure OpenAI account name | `oai-partner-demo-001` |
     | `var.storage_account_name` | Globally unique Storage Account name (lowercase alphanumeric only, 3-24 chars) | `stgpartnerdemo001` |
-    | `var.storage_container_name` | Blob container name for Prisma Model Security (Idira) scans | `ai-models-scan` |
+    | `var.storage_container_name` | Blob container name for Prisma Model Security scans | `ai-models-scan` |
 
     Review the execution plan in the terminal and type **`yes`** when prompted to confirm deployment.
 
