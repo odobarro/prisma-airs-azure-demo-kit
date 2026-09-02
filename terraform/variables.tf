@@ -45,6 +45,6 @@ variable "model_name" {
 
 variable "model_version" {
   type        = string
-  default     = null
+  default     = "2024-10-01"
   description = "Version of the OpenAI model"
 }
