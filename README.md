@@ -1,6 +1,8 @@
 # Prisma AIRS & Azure OpenAI Demo Environment
 
-An automated, enterprise-grade Infrastructure-as-Code (IaC) package using **Terraform** to deploy a serverless Azure AI environment. Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilities—including **AI Gateway**, **AI Runtime Security**, and **Prisma Model Security**
+An automated, enterprise-grade Infrastructure-as-Code (IaC) package using **Terraform** to deploy a serverless Azure AI environment.
+
+Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilities—including **AI Gateway**, **AI Runtime Security**, and **Prisma Model Security**
 
 ---
 
@@ -83,9 +85,10 @@ Teardown & Resource Cleanup
 ```bash
 cd terraform
 terraform destroy
-
-Type yes to confirm deletion.
 ```
+
+Type **`yes`** to confirm deletion.
+
 
 *Important Azure OpenAI Soft-Delete Notice: Azure OpenAI enforces a 48-hour soft-delete retention policy by default. If you destroy the infrastructure and run terraform apply immediately using the same openai_account_name, Azure will reject it. Use a new name or purge the deleted resource via Azure CLI:*
 
