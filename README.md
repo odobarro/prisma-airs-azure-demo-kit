@@ -26,59 +26,55 @@ Before running this deployment, ensure you have:
 
 ## Step-by-Step Deployment Guide
 
-### 1. Clone & Set Up Local Repository
+1. **Clone & Set Up Local Repository**
 
-Clone the repository to your Mac/PC using VS Code or Git terminal:
+    Clone the repository to your Mac/PC using VS Code or Git terminal:
 
-```bash
-git clone https://github.com/odobarro/prisma-airs-azure-demo-kit
-cd prisma-airs-azure-demo-kit
+    ```bash
+    git clone [https://github.com/odobarro/prisma-airs-azure-demo-kit](https://github.com/odobarro/prisma-airs-azure-demo-kit)
+    cd prisma-airs-azure-demo-kit
+    ```
 
-If you are setting up the repository for the first time, commit and push your baseline files:
+2. **Authenticate to Azure CLI**
 
-Bash
-git config --global user.name "Your Name"
-git config --global user.email "your_email@domain.com"
+    Log in to your Azure account in your terminal:
 
-git add .
-git commit -m "feat: initial terraform setup for azure openai and storage"
-git push origin main
+    ```bash
+    az login
+    ```
 
----
+    *If you manage multiple subscriptions, select your active target:*
 
-### 2. Authenticate to Azure CLI
-Log in to your Azure account in your terminal:
+    ```bash
+    az account set --subscription "YOUR_SUBSCRIPTION_ID_OR_NAME"
+    ```
 
-az login
+3. **Initialize & Apply Terraform**
 
-If you manage multiple subscriptions, select your active target:
+    Navigate to the `terraform/` directory and initialize the AzureRM provider plugins:
 
-Bash
-az account set --subscription "YOUR_SUBSCRIPTION_ID_OR_NAME"
+    ```bash
+    cd terraform
+    terraform init
+    ```
 
----
+    Execute the deployment. Terraform will prompt you **interactively** for environment-specific parameters:
 
-### 3. Initialize & Apply Terraform
-Navigate to the terraform/ directory:
+    ```bash
+    terraform apply
+    ```
 
-cd terraform
-terraform init
+    #### Interactive Prompt Reference
 
-Execute the deployment. Terraform will prompt you interactively for environment-specific parameters:
+    | Parameter | Description | Input Example |
+    |---|---|---|
+    | `var.azure_location` | Target Azure Region | `spaincentral` |
+    | `var.resource_group_name` | Name for the Azure Resource Group | `rg-partner-prisma-demo` |
+    | `var.openai_account_name` | Globally unique Azure OpenAI account name | `oai-partner-demo-001` |
+    | `var.storage_account_name` | Globally unique Storage Account name (lowercase alphanumeric only, 3-24 chars) | `stgpartnerdemo001` |
+    | `var.storage_container_name` | Blob container name for Prisma Model Security (Idira) scans | `ai-models-scan` |
 
-terraform apply
-
-#### Interactive Prompt Reference
-
-| Parameter | Description | Input Example |
-|---|---|---|
-| `var.azure_location` | Target Azure Region | `spaincentral` |
-| `var.resource_group_name` | Name for the Azure Resource Group | `rg-partner-prisma-demo` |
-| `var.openai_account_name` | Globally unique Azure OpenAI account name | `oai-partner-demo-001` |
-| `var.storage_account_name` | Globally unique Storage Account name (lowercase alphanumeric only, 3-24 chars) | `stgpartnerdemo001` |
-| `var.storage_container_name` | Blob container name for Prisma Model Security (Idira) scans | `ai-models-scan` |
-
-Review the plan and type yes to create the resources.
+    Review the execution plan in the terminal and type **`yes`** when prompted to confirm deployment.
 
 Teardown & Resource Cleanup
 
