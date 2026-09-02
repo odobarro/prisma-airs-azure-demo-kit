@@ -96,7 +96,7 @@ az cognitiveservices account show \
   --query "properties.endpoint" -o tsv
   --query "key1" -o tsv
 ```
-## Teardown & Resource Cleanup
+# Teardown & Resource Cleanup
 
 ## To completely remove all Azure resources:
 
