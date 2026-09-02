@@ -8,7 +8,7 @@ Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilitiesâ
 
 ## Architecture
 
-* **Azure OpenAI Service**: Deploys `gpt-4o-mini` (version `2024-07-18`).
+* **Azure OpenAI Service**: Deploys `gpt-4o-mini`.
 * **Azure Storage Account (`Standard_LRS`)**: Dedicated Blob Storage container for static AI model vulnerability scanning (`.pkl`, `.safetensors`, `.onnx` files) via **Prisma Model Security**.
 
 

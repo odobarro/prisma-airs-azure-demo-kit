@@ -33,9 +33,9 @@ resource "azurerm_cognitive_deployment" "gpt_model" {
   name                 = var.model_deployment_name
   cognitive_account_id = azurerm_cognitive_account.openai.id
   model {
-    format  = "OpenAI"
-    name    = var.model_name
-    version = var.model_version
+    format = "OpenAI"
+    name   = var.model_name
+    # Se omite 'version' para auto-asignar la versión activa soportada por Azure OpenAI
   }
   scale {
     type = "GlobalStandard"
@@ -49,15 +49,20 @@ resource "azurerm_storage_account" "stg" {
   location                 = azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-
-  network_rules {
-    default_action = "Deny"
-    bypass         = ["AzureServices"]
-  }
 }
 
+# 5. Blob Container (Se crea MIENTRAS el acceso a red está abierto para la API de Terraform)
 resource "azurerm_storage_container" "models_container" {
   name                  = var.storage_container_name
   storage_account_name  = azurerm_storage_account.stg.name
   container_access_type = "private"
+}
+
+# 6. Network Lockdown (Se aplica DESPUÉS de crear el contenedor para cumplir la Azure Policy CSB)
+resource "azurerm_storage_account_network_rules" "stg_rules" {
+  storage_account_id = azurerm_storage_account.stg.id
+  default_action     = "Deny"
+  bypass             = ["AzureServices"]
+
+  depends_on = [azurerm_storage_container.models_container]
 }
