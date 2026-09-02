@@ -28,7 +28,7 @@ resource "azurerm_cognitive_account" "openai" {
   custom_subdomain_name = var.openai_account_name
 }
 
-# 3. LLM Model Deployment (Target endpoint for Prisma Runtime Firewall)
+# 3. LLM Model Deployment (Target endpoint for Portkey AI Gateway & Prisma AIRS Firewall)
 resource "azurerm_cognitive_deployment" "gpt_model" {
   name                 = var.model_deployment_name
   cognitive_account_id = azurerm_cognitive_account.openai.id
@@ -38,17 +38,22 @@ resource "azurerm_cognitive_deployment" "gpt_model" {
     version = var.model_version
   }
   scale {
-    type = "Standard"
+    type = "GlobalStandard"
   }
 }
 
-# 4. Storage Account for Prisma Model Security (Static model file scanning)
+# 4. Storage Account for Prisma Model Security
 resource "azurerm_storage_account" "stg" {
   name                     = var.storage_account_name
   resource_group_name      = azurerm_resource_group.rg.name
   location                 = azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  network_rules {
+    default_action = "Deny"
+    bypass         = ["AzureServices"]
+  }
 }
 
 resource "azurerm_storage_container" "models_container" {
