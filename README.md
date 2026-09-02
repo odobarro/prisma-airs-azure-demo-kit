@@ -93,5 +93,5 @@ Type **`yes`** to confirm deletion.
 *Important Azure OpenAI Soft-Delete Notice: Azure OpenAI enforces a 48-hour soft-delete retention policy by default. If you destroy the infrastructure and run terraform apply immediately using the same openai_account_name, Azure will reject it. Use a new name or purge the deleted resource via Azure CLI:*
 
 ```bash
-az cognitiveservices account purge --name <OPENAI_ACCOUNT_NAME> --resource-group <RESOURCE_GROUP_NAME> --location spaincentral
+az cognitiveservices account purge --name <OPENAI_ACCOUNT_NAME> --resource-group <RESOURCE_GROUP_NAME> --location <AZURE_LOCATION>
 ```
