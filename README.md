@@ -22,7 +22,7 @@ To successfully deploy and secure this environment, follow this two-phase execut
 ### Phase 1: Deploy Azure Infrastructure
 Before configuring any security policies, you MUST provision the base cloud resources in Azure.
 
-👉 Go to Azure Infrastructure Deployment Guide (01-azure-openai-infrastructure/)
+👉 Go to [Azure Infrastructure Deployment Guide](./01-azure-openai-infrastructure/)
 
 ### Phase 2: Enable Prisma AIRS Security Modules
 Once your Azure OpenAI endpoint and Storage Account are active, explore and implement the security integration modules based on your use case:
