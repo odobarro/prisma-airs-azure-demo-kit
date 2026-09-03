@@ -41,8 +41,13 @@ Before running this deployment, ensure you have:
 
 1. **Azure CLI**: Installed and logged in (`az login`).
 2. **Terraform**: Version `>= 1.5.0` installed.
-3. **Git**: Installed and configured with your credentials.
-4. **Active Azure Subscription**: Permissions to create Resource Groups, Cognitive Services, and Storage Accounts.
-5. **Prisma AIRS Tenant**: Admin/Developer access to configure AI Gateway, Runtime Guardrails, and other integrations.
+3. **Node.js & npm**: `Node.js v18+` (Required for running the Prisma AIRS CLI abstraction).
+4. **Prisma AIRS CLI**: Official operational CLI tool (`@cdot65/prisma-airs-cli`) that provides full operational coverage over Palo Alto Networks Prisma AIRS AI security capabilities.
+   * **Installation Guide**: [Prisma AIRS CLI Installation](https://cdot65.github.io/prisma-airs-cli/getting-started/installation)
+   * **Quick Install**: `npm install -g @cdot65/prisma-airs-cli`
+   * **Verification**: Run `airs --version` in your terminal to verify installation.
+5. **Git**: Installed and configured with your credentials.
+6. **Active Azure Subscription**: Permissions to create Resource Groups, Cognitive Services, and Storage Accounts.
+7. **Prisma AIRS Tenant**: Strata Cloud Manager (SCM) Service Account credentials (`PANW_MGMT_CLIENT_ID`, `PANW_MGMT_CLIENT_SECRET`, `PANW_MGMT_TSG_ID`) with access to configure AI Gateway, Runtime Guardrails, and Security Integrations.
 
 ---
