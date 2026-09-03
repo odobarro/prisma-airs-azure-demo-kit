@@ -48,6 +48,6 @@ Before running this deployment, ensure you have:
    * **Verification**: Run `airs --version` in your terminal to verify installation.
 5. **Git**: Installed and configured with your credentials.
 6. **Active Azure Subscription**: Permissions to create Resource Groups, Cognitive Services, and Storage Accounts.
-7. **Prisma AIRS Tenant**: Strata Cloud Manager (SCM) Service Account credentials (`PANW_MGMT_CLIENT_ID`, `PANW_MGMT_CLIENT_SECRET`, `PANW_MGMT_TSG_ID`) with access to configure AI Gateway, Runtime Guardrails, and Security Integrations.
+7. **Palo Alto Networks FlexCredits**: Active **FlexCredits** allocated in your Customer Service Portal (CSP) / Strata Cloud Manager (SCM) tenant to enable and consume Prisma AIRS modules (AI Gateway, AI Runtime Security, Model Security, etc.).
 
 ---
