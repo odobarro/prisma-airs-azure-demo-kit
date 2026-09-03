@@ -36,3 +36,29 @@ AI Gateway is licensed using **Palo Alto Networks Flex Credits**. All metering i
 ### 2. SaaS Onboarding
 
 The SaaS Gateway is enabled by default. After licensing activation, you can start routing AI traffic through the gateway immediately — no infrastructure work required.
+
+### 3. Service Account and Role Setup in SCM
+
+To automate the creation of Workspaces, Virtual Keys, Providers,... via APIs, you must create a dedicated Service Account in Strata Cloud Manager (SCM).
+
+#### Step 1: Create the Custom Role
+
+1. Access **Strata Cloud Manager** ([stratacloudmanager.paloaltonetworks.com](https://stratacloudmanager.paloaltonetworks.com/)).
+2. Navigate to **System Settings** -> **Identity & Access Management** -> **Roles** -> **Custom Roles**.
+3. Click **Add Role**, set **Name** to `airs_automation_role`, and **Description** to `Custom role for AIRS automation`.
+4. In the permissions matrix, enable:
+   * **AI Security**
+   * **AI Model Security**
+   * **AI Agent Fabric**  
+   <p align="center">
+   <img src="./images/Custom_Role.png" alt="Custom Role Permissions SCM" width="750"/>
+   </p>
+   *(Note: These global options are enabled so this same service account can be reused across all other modules in this repository. If you prefer a strictly restricted approach, you can limit the scope exclusively to AI Runtime Security / Gateway Management capabilities).*
+5. Click **Save** to store the role definition within your Tenant Service Group (TSG).
+
+#### Step 2: Provision the Service Account
+
+1. Under **System Settings** -> **Identity & Access Management**, select the **Service Accounts** tab.
+2. Click **Add Service Account**, set the name to `sa-prisma-airs-automation`, and assign the `airs_automation_role`.
+3. Save the generated **Client ID**, **Client Secret**, and your **TSG ID**.
+4. Export these environment variables in your local terminal before running automation scripts:
