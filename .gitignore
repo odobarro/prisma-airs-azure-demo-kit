@@ -46,3 +46,20 @@ terraform.rc
 # Temporary API responses and SCM tokens
 *token_response.json
 *workspace_response.json
+
+# ==========================================
+# Additional Terraform & System Locks
+# ==========================================
+.terraform.lock.hcl
+
+# ==========================================
+# Prisma AIRS CLI / AI Gateway Temporary Outputs
+# ==========================================
+*list_response.json
+*_response.json
+*.json.tmp
+
+# ==========================================
+# OS & IDE Transient Files
+# ==========================================
+.DS_Store
