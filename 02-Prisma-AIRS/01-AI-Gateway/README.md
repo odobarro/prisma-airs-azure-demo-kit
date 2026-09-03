@@ -14,7 +14,7 @@ Managed through **Palo Alto Networks Strata Cloud Manager (SCM)**, it supports t
 
 ---
 
-## Step-by-Step AI Gateway Deployment & Integration
+## Step-by-Step AI Gateway Deployment & Integration with Azure OpenAI
 
 ### 1. Licensing and Activation
 
