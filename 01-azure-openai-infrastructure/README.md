@@ -1,11 +1,11 @@
-# Step-by-Step Deployment Guide
+# Step-by-Step Azure Infrastructure Deployment
 
 1. **Clone & Set Up Local Repository**
 
     Clone the repository to your Mac/PC using VS Code or Git terminal:
 
     ```bash
-    git clone [https://github.com/odobarro/prisma-airs-azure-demo-kit](https://github.com/odobarro/prisma-airs-azure-demo-kit)
+    git clone git clone https://github.com/odobarro/prisma-airs-azure-demo-kit.git
     cd prisma-airs-azure-demo-kit
     ```
 
@@ -25,10 +25,10 @@
 
 3. **Initialize & Apply Terraform**
 
-    Navigate to the `terraform/` directory and initialize the AzureRM provider plugins:
+    Navigate to the `01-azure-openai-infrastructure/terraform/` directory and initialize the AzureRM provider plugins:
 
     ```bash
-    cd terraform
+    cd 01-azure-openai-infrastructure/terraform
     terraform init
     ```
 
@@ -52,27 +52,32 @@
 
 4. **Retrieve the Primary API Key (Key1)**
 
-```bash
-az cognitiveservices account keys list \
-  --name <your_openai_account_name> \
-  --resource-group <your_resource_group> \
-  --query "key1" -o tsv
-```
+    ```bash
+    az cognitiveservices account keys list \
+      --name <your_openai_account_name> \
+      --resource-group <your_resource_group> \
+      --query "key1" -o tsv
+    ```
 
 5. **Confirm the Public Endpoint**
 
-```bash
-az cognitiveservices account show \
-  --name <your openai_account_name> \
-  --resource-group <your resource-group> \
-  --query "properties.endpoint" -o tsv
-```
+    ```bash
+    az cognitiveservices account show \
+      --name <your_openai_account_name> \
+      --resource-group <your_resource_group> \
+      --query "properties.endpoint" -o tsv
+    ```
+
+---
+
 # Teardown & Resource Cleanup
 
 ## To completely remove all Azure resources:
 
+Make sure you are inside the Terraform directory (`01-azure-openai-infrastructure/terraform/`):
+
 ```bash
-cd terraform
+cd 01-azure-openai-infrastructure/terraform
 terraform destroy
 ```
 
