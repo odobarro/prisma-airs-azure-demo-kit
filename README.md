@@ -91,10 +91,9 @@ az cognitiveservices account keys list \
 
 ```bash
 az cognitiveservices account show \
-  --name <your_openai_account_name> \
-  --resource-group <your_resource_group> \
+  --name <your openai_account_name> \
+  --resource-group <your resource-group> \
   --query "properties.endpoint" -o tsv
-  --query "key1" -o tsv
 ```
 # Teardown & Resource Cleanup
 
