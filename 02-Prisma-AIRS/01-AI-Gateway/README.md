@@ -58,7 +58,16 @@ To automate the creation of Workspaces, Virtual Keys, Providers,... via APIs, yo
 
 #### Step 2: Provision the Service Account
 
-1. Under **System Settings** -> **Identity & Access Management**, select the **Service Accounts** tab.
-2. Click **Add Service Account**, set the name to `sa-prisma-airs-automation`, and assign the `airs_automation_role`.
-3. Save the generated **Client ID**, **Client Secret**, and your **TSG ID**.
-4. Export these environment variables in your local terminal before running automation scripts:
+1. Under **System Settings** -> **Identity & Access Management** ->  **Access Management** select **Add Identity**.
+2. Identity Type **Service Account**, set the Service Account Name to **sa-prisma-airs-automation** and Description (optional) **Service Account for AIRS Automation** and them click **Next**
+   <p align="center">
+   <img src="./images/Service_Account_1.png" alt="Service Account 1" width="750"/>
+   </p>
+3. Copy and save in a secure place the **Client ID** and **Client Secret** and click **Next**
+   <p align="center">
+   <img src="./images/Service_Account_2.png" alt="Service Account 2" width="750"/>
+   </p>
+4. In Assign Roles select the custom role **airs_automation_role** and click Submit
+   <p align="center">
+   <img src="./images/Service_Account_3.png" alt="Service Account 3" width="750"/>
+   </p>
