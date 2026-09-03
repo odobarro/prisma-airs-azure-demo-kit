@@ -59,7 +59,7 @@ To automate the creation of Workspaces, Virtual Keys, Providers,... via APIs, yo
 #### Step 2: Provision the Service Account
 
 1. Under **System Settings** -> **Identity & Access Management** ->  **Access Management** select **Add Identity**.
-2. Identity Type **Service Account**, set the Service Account Name to **sa-prisma-airs-automation** and Description (optional) **Service Account for AIRS Automation** and them click **Next**
+2. Identity Type **Service Account**, set the Service Account Name to **sa-prisma-airs-automation** and Description (optional) **Service Account for AIRS Automation** and click **Next**
    <p align="center">
    <img src="./images/Service_Account_1.png" alt="Service Account 1" width="750"/>
    </p>
@@ -70,4 +70,16 @@ To automate the creation of Workspaces, Virtual Keys, Providers,... via APIs, yo
 4. In Assign Roles select the custom role **airs_automation_role** and click Submit
    <p align="center">
    <img src="./images/Service_Account_3.png" alt="Service Account 3" width="750"/>
+   </p>
+
+#### Step 3: Get the TSG ID
+
+1. Access **Strata Cloud Manager** ([stratacloudmanager.paloaltonetworks.com](https://stratacloudmanager.paloaltonetworks.com/)).
+2. Navigate to **System Settings** -> **Tenant** and select the AI GW Tenant and then go to Actions and select producto information:
+   <p align="center">
+   <img src="./images/TSG_ID_1.png" alt="TSG ID 1" width="750"/>
+   </p>
+3. Copy the **TSG ID** in a secure place
+   <p align="center">
+   <img src="./images/TSG_ID_2.png" alt="TSG ID 2" width="750"/>
    </p>
