@@ -37,7 +37,7 @@ resource "null_resource" "create_prisma_workspace" {
       PANW_MGMT_CLIENT_SECRET = self.triggers.client_secret
       PANW_MGMT_TSG_ID        = self.triggers.tsg_id
     }
-    # Archiva el workspace (Destruye en cascada todo lo que hay dentro, incluidas las API Keys)
+    # Archives the workspace (Cascades destruction to internal resources, including API Keys)
     command = "airs aigateway workspace archive \"${self.triggers.workspace_name}\" --force"
   }
 }
@@ -94,13 +94,13 @@ resource "null_resource" "create_azure_openai_integration" {
       PANW_MGMT_CLIENT_SECRET = self.triggers.client_secret
       PANW_MGMT_TSG_ID        = self.triggers.tsg_id
     }
-    # Quitamos el '|| true' para que si falla la destrucción, Terraform nos muestre el error real de SCM
+    # Removed '|| true' so Terraform surfaces the actual error from SCM on failure
     command = "airs aigateway integrations delete --slug \"${self.triggers.integration_slug}\" --force"
   }
 }
 
 # ==============================================================================
-# 3. Workspace API Key Generation (Data Plane Credentials para Testing)
+# 3. Workspace API Key Generation (Data Plane Credentials for Testing)
 # ==============================================================================
 resource "null_resource" "create_workspace_api_key" {
   depends_on = [null_resource.create_prisma_workspace]
@@ -121,17 +121,17 @@ resource "null_resource" "create_workspace_api_key" {
     command = <<EOT
       set -eo pipefail
 
-      # Extraemos el ID del Workspace recién creado
+      # Extract the newly created Workspace ID
       WS_ID=$(grep -E -i -o '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' workspace_creation_response.json | head -1)
 
       if [ -z "$WS_ID" ]; then
-        echo "Error: No se pudo extraer el WS_ID para crear la API Key."
+        echo "Error: Failed to extract WS_ID for API Key creation."
         exit 1
       fi
 
-      echo "--> Generando API Key Service-to-Service para Pruebas..."
+      echo "--> Generating Service-to-Service API Key for Testing..."
 
-      # Creamos la llave con permisos de inferencia y logs
+      # Create key with inference and logging scopes
       airs aigateway api-keys service create \
         --workspace "$WS_ID" \
         --organisation-id "${var.panw_mgmt_tsg_id}" \
@@ -141,13 +141,13 @@ resource "null_resource" "create_workspace_api_key" {
         --show-secret \
         --output json > workspace_apikey_response.json
         
-      echo "--> API Key generada con éxito."
+      echo "--> API Key successfully generated."
     EOT
   }
 }
 
 # ==============================================================================
-# 4. Outputs de Infraestructura
+# 4. Infrastructure Data Sources
 # ==============================================================================
 data "local_file" "workspace_creation_result" {
   depends_on = [null_resource.create_prisma_workspace]
