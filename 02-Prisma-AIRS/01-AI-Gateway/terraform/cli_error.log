@@ -1,0 +1,5 @@
+
+  ✗ Error: AISEC_CLIENT_SIDE_ERROR:You do not have enough permissions to execute this request (errorCode: AB03)
+    HTTP 403
+    Re-run with --debug to capture full API traffic.
+
