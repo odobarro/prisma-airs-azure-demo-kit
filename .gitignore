@@ -43,18 +43,26 @@ terraform.rc
 # Uncomment the line below if you want to ignore planout files.
 # planout
 
-# Temporary API responses and SCM tokens
-*token_response.json
-*workspace_response.json
-
 # ==========================================
 # Additional Terraform & System Locks
 # ==========================================
 .terraform.lock.hcl
 
 # ==========================================
-# Prisma AIRS CLI / AI Gateway Temporary Outputs
+# Prisma AIRS, Portkey & Security Artifacts
 # ==========================================
+# Binarios locales descargados de la CLI de AIRS (evita subir ejecutables pesados)
+**/airs
+**/airs.exe
+
+# Logs de error y depuración de la CLI de AIRS / SCM (pueden contener Tokens OIDC y secretos)
+**/cli_error.log
+**/debug-api-*.jsonl
+**/.prisma-airs/
+
+# Respuestas JSON temporales del Control Plane / Data Plane (IDs de Workspaces, API Keys, etc.)
+*token_response.json
+*workspace_response.json
 *list_response.json
 *_response.json
 *.json.tmp
