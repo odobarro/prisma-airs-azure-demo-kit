@@ -71,3 +71,9 @@ terraform.rc
 # OS & IDE Transient Files
 # ==========================================
 .DS_Store
+
+# Safe-guard: Block all environment variables & AI secrets
+.env
+.env.local
+.env.*.local
+*.env
