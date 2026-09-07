@@ -99,6 +99,7 @@ The local `terraform.tfvars` file must contain **only** the required authenticat
 Create a file named `terraform.tfvars` inside the `01-AI-Gateway` directory:
 
 ```bash
+cd 01-AI-Gateway/terraform
 touch terraform.tfvars
 ```
 
@@ -106,6 +107,7 @@ touch terraform.tfvars
 
 Populate terraform.tfvars with your Palo Alto Networks Service Account credentials, TSG ID, and Azure OpenAI API key:
 
+```bash
 # ==============================================================================
 # Palo Alto Networks Strata Cloud Manager (SCM) Credentials
 # ==============================================================================
@@ -117,6 +119,7 @@ panw_mgmt_tsg_id        = "YOUR_TENANT_SERVICE_GROUP_ID" # e.g., "1534850609"
 # Azure OpenAI Credentials
 # ==============================================================================
 azure_openai_api_key    = "YOUR_AZURE_OPENAI_API_KEY"
+```
 
 #### Variables Resolution & Lifecycle Summary
 
