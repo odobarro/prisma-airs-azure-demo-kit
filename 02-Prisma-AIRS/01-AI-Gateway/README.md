@@ -174,11 +174,11 @@ var.azure_openai_resource_name
 
 Type your resource subdomain (e.g., aoai-demo-secops) and press Enter. Terraform will proceed to execute:
 
-Workspace Provisioning: Creates the isolated Scope boundary using OIDC scope claims (profile tsg_id:<TSG_ID> email) and the default workspace name ws-azure-demo.
+**Workspace Provisioning**: Creates the isolated Scope boundary using OIDC scope claims (profile tsg_id:<TSG_ID> email) and the default workspace name ws-azure-demo.
 
-Global Provider Integration: Registers your Azure OpenAI instance, mapping its deployment alias (azure-gpt4mini-demo) to the target model gpt-4.1-mini-2025-04-14 and API version 2024-06-01.
+**Global Provider Integration**: Registers your Azure OpenAI instance, mapping its deployment alias (azure-gpt4mini-demo) to the target model gpt-4.1-mini-2025-04-14 and API version 2024-06-01.
 
-Service API Key Generation: Issues a Data Plane Testing Security Key (tf-demo-testing-key) bound to the workspace with inference (completions.write) and logging (logs.write) capabilities.
+**Service API Key Generation**: Issues a Data Plane Testing Security Key (tf-demo-testing-key) bound to the workspace with inference (completions.write) and logging (logs.write) capabilities.
 
 ---
 
@@ -197,7 +197,7 @@ Once the Workspace Scope and Global Azure OpenAI Integration have been provision
 1. Within the integration details, click on the **Workspace Provisioning** tab.
 2. Click **Add Workspace / Assign Scope** and select your target workspace (**`ws-azure-demo`**).
 3. Define your **FinOps & Rate Limiting Controls**:
-   * **Monthly Budget Limit ($):** Set hard or soft spending caps to control Azure OpenAI consumption (e.g., `$100/month`).
+   * **Monthly Budget Limit ($):** Set caps to control Azure OpenAI consumption (e.g., `$100/month`).
    * **Rate Limits:** Configure maximum allowed requests or token throughput per minute to prevent budget overruns.
 4. Click **Save & Apply** to enforce real-time Layer 7 governance over the integration path.
 
