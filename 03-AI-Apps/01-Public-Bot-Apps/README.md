@@ -19,7 +19,7 @@ As public interfaces exposed to unauthenticated users, these applications repres
 This project uses **Next.js (App Router)** and includes pre-configured security and observability controls out of the box:
 
 * **Layer 7 Edge Firewall (`middleware.ts`):** Validates the client source IP against `ALLOWED_IP` before executing any application logic, preventing unauthorized access and budget exhaustion.
-* **AI Gateway Proxy (`app/api/retail/route.ts`):** Encapsulates calls to the Prisma AIRS Gateway (`aigw.portkey.ai`). It abstracts underlying LLM keys and injects metadata tags (`x-portkey-custom-metadata`) for real-time tracking in **Strata Cloud Manager (SCM)**.
+* **AI Gateway Proxy (`app/api/route.ts`):** Encapsulates calls to the Prisma AIRS Gateway (`aigw.portkey.ai`). It abstracts underlying LLM keys and injects metadata tags (`x-portkey-custom-metadata`) for real-time tracking in **Strata Cloud Manager (SCM)**.
 * **Retail Portal (`app/retail/page.tsx`):** A fully functional e-commerce frontend featuring an embedded assistant widget connected to the backend proxy.
 
 ---
@@ -61,8 +61,5 @@ Click **Deploy**. Vercel will build and host the application globally at the Edg
 | File / Path | Purpose | Environment Configuration |
 | :--- | :--- | :--- |
 | `middleware.ts` | Edge IP restriction firewall. | Controlled via `ALLOWED_IP` in Vercel Environment Variables. |
-| `app/api/retail/route.ts` | Backend API handler routing traffic to Prisma AIRS. | Adjust metadata or model aliases in payload if needed. |
+| `app/api/route.ts` | Backend API handler routing traffic to Prisma AIRS. | Adjust metadata or model aliases in payload if needed. |
 | `app/retail/page.tsx` | Retail UI with embedded AI chat widget. | Accessible at `https://<your-vercel-domain>/retail`. |
-
----
-
