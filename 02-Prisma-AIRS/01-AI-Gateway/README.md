@@ -100,6 +100,7 @@ Create a file named `terraform.tfvars` inside the `01-AI-Gateway` directory:
 
 ```bash
 touch terraform.tfvars
+```
 
 #### Step 2: Define Required Credentials
 
@@ -141,24 +142,32 @@ The Terraform configuration provisions the Control Plane resources using the loc
 #### Step 1: Initialize Terraform
 Initialize the working directory and download required provider plugins:
 
+```bash
 terraform init
+```
 
 ### Step 2: Review Execution Plan
 Inspect the resources to be created:
 
+```bash
 terraform plan
+```
 
 ### Step 3: Apply Configuration
 Execute the deployment:
 
+```bash
 terraform apply
+```
 
 During the apply phase, Terraform will pause and prompt interactively for your Azure OpenAI resource subdomain (since no default value is defined for this variable):
 
+```bash
 var.azure_openai_resource_name
   Enter the Resource Name / Subdomain of your configured Azure OpenAI Instance in Azure Portal (e.g. 'aoai-demo-secops')
 
   Enter a value:
+```
 
 Type your resource subdomain (e.g., aoai-demo-secops) and press Enter. Terraform will proceed to execute:
 
@@ -210,6 +219,7 @@ curl -i -X POST "https://aigw.portkey.ai/v1/chat/completions" \
       {"role": "user", "content": "Hello, confirm secure traffic routing through Portkey AI Gateway and Prisma AIRS."}
     ]
   }'
+```
 
 #### Step 2: Verify Successful Response
 A successful execution will return an HTTP/1.1 200 OK status in your terminal. The response headers will include critical AI routing and FinOps metadata, such as x-portkey-provider: azure-openai and real-time token deductions (x-ratelimit-remaining-tokens).
@@ -228,4 +238,3 @@ Locate your recent test prompt. Click on the log entry to review the exact promp
    <p align="center">
    <img src="./images/Verify_1.png" alt="Verify log" width="750"/>
    </p>
-   
