@@ -34,6 +34,10 @@ Once your Azure OpenAI endpoint and Storage Account are active, explore and impl
 | **03. AI RedTeaming** | Simulates context-aware, automated attack scenarios to discover emergent behaviors and flaws in hours instead of weeks. | [03-AI RedTeaming](./02-Prisma-AIRS/03-AI%20RedTeaming/) |
 | **04. AI Runtime** | Intercepts and blocks prompt injections, indirect injections, and data exfiltration across prompts, tool calls, and LLM outputs. | [04-AI Runtime](./02-Prisma-AIRS/04-AI%20Runtime/) |
 
+### Phase 3: Deploy Demo Applications (AI Consumers)
+Launch pre-configured frontend applications to simulate real-world AI traffic (e.g., retail chatbots) and demonstrate the applied Prisma AIRS security policies and FinOps controls in action.
+
+👉 Go to [AI Application Layer](./03-AI-Apps/)
 
 ## Prerequisites
 
