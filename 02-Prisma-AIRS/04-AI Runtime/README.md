@@ -36,10 +36,13 @@ From a **FinOps** perspective across Azure, AWS, and GCP, executing inline inspe
 
 #### Activation Steps
 
-* In **Strata Cloud Manager (SCM)**, allocate Flex Credits to **AI Runtime Security**.
-* Bind the Deployment Profile to your **Tenant Service Group (TSG)**.  
-  > ⚠️ The Tenant Service Group (TSG) **MUST be located in a supported Region**.
+* Create a **Deployment Profile (DP)** in Strata Cloud Manager (SCM) and allocate Flex Credits to AI Runtime Security (API).
+* Map the Deployment Profile to a **Tenant Service Group (TSG)**.  
+  > ⚠️ The Tenant Service Group (TSG) **MUST be located in the Americas Region**.
+* Launch SCM to complete setup and configuration.
 
+> 📘 **Official Documentation Reference:**  
+> [Palo Alto Networks - Create a Deployment Profile for Prisma AIRS AI Runtime API](https://docs.paloaltonetworks.com/ai-runtime-security/activation-and-onboarding/ai-runtime-security-api-intercept-overview/ai-deployment-profile-airs-api-intercept)
 ---
 
 
@@ -66,14 +69,3 @@ AI Security Profiles define the unified security policies, threat signatures, an
 2. Enable the **GDPR Compliance Group**.
 4. Click **Save & Publish** to activate the policy across both API hooks and Firewall engines.
 
----
-
-### 3. Provisioning Deployment Profiles & Obtaining Profile Credentials
-
-Generate a **Deployment Profile ID** to link API calls and Network Firewall rules to your security policy.
-
-1. In SCM, navigate to **AI Security** -> **AI Security Policies** -> **Deployment Profiles**.
-2. Click **Create Deployment Profile**, set Name to `dp-retail-production`, and assign the Security Profile (`rt-api-public-chatbots-profile`).
-3. Save the profile and record the generated **Profile ID** (e.g., `c25d4fe8-15e4-4171-9e3d-166b3173f644`) and **API Token**.
-
----
