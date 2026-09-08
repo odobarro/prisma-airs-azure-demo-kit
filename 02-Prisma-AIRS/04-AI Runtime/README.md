@@ -57,4 +57,14 @@ AI Security Profiles define the unified security policies, threat signatures, an
 3. Click **Create New** and configure:
    * **Profile Name:** `rt-api-public-chatbots-profile`
    * Under **AI Security:**
-
+   <p align="center">
+   <img src="./images/AI_Security_1.png" alt="AI Security1" width="750"/>
+   </p>
+   <p align="center">
+   <img src="./images/AI_Security_2.png" alt="AI Security2" width="750"/>
+   </p>
+   * Under **Content and Brand Safety:**
+   <p align="center">
+   <img src="./images/Content_1.png" alt="Content" width="750"/>
+   </p>
+   * Remaining options (default)
