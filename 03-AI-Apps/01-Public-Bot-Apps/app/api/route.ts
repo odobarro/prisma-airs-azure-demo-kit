@@ -1,39 +1,58 @@
+// app/api/route.ts
 import { NextResponse } from 'next/server';
+import Portkey from 'portkey-ai';
+
+// Initialize Portkey client connected to Prisma AIRS AI Gateway
+const portkey = new Portkey({
+  apiKey: process.env.PORTKEY_API_KEY || '',
+  virtualKey: process.env.PORTKEY_VIRTUAL_KEY || '',
+  config: process.env.PORTKEY_CONFIG_ID || '' // References your semantic cache config
+});
 
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    const response = await fetch(`${process.env.PORTKEY_GATEWAY_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-portkey-api-key': process.env.PORTKEY_API_KEY || '',
-        'x-portkey-virtual-key': process.env.PORTKEY_VIRTUAL_KEY || '',
-        
-        // FINOPS & OBSERVABILITY METADATA (Prisma AIRS / Strata Cloud Manager)
-        'x-portkey-custom-metadata': JSON.stringify({
-          vertical: 'retail',
-          app_name: 'public-retail-portal',
-          environment: 'demo',
-          cloud_provider: 'azure'
-        })
-      },
-      body: JSON.stringify({
-        model: 'azure-gpt4mini-demo',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are the virtual customer support assistant for NovaRetail Store. Only answer queries regarding products, stock, orders, and store policies.' 
-          },
-          ...messages
-        ]
-      })
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: 'Invalid request payload: "messages" array is required.' },
+        { status: 400 }
+      );
+    }
+
+    // 1. Extract the System Prompt (defines NovaRetail guardrails and assistant context)
+    const systemMessage = messages.find((m: { role: string }) => m.role === 'system');
+
+    // 2. Extract ONLY the latest user message to prevent historical token inflation
+    const lastUserMessage = messages
+      .filter((m: { role: string }) => m.role === 'user')
+      .pop();
+
+    if (!lastUserMessage) {
+      return NextResponse.json(
+        { error: 'No user message found in the conversation payload.' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Reconstruct lightweight, deterministic payload for Prisma AIRS edge processing
+    const cleanMessages = [
+      ...(systemMessage ? [systemMessage] : []),
+      lastUserMessage
+    ];
+
+    // 4. Dispatch request through Prisma AIRS AI Gateway to Azure OpenAI
+    const response = await portkey.chat.completions.create({
+      model: 'azure-gpt4mini-demo',
+      messages: cleanMessages
     });
 
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to communicate with AI Gateway' }, { status: 500 });
+    return NextResponse.json(response);
+  } catch (error: any) {
+    console.error('Prisma AIRS Gateway Error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal Server Error' },
+      { status: error.status || 500 }
+    );
   }
 }
