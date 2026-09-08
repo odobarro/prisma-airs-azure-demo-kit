@@ -1,22 +1,23 @@
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // 1. Obtenemos las IPs permitidas (soporta separadas por comas)
+  // 1. Retrieve allowed IP addresses from environment variables (supports comma-separated values)
   const allowedIpsString = process.env.ALLOWED_IP || '';
   const allowedList = allowedIpsString.split(',').map(ip => ip.trim());
 
-  // 2. Extraemos la IP real del cliente limpiando los proxies de Vercel Edge
+  // 2. Extract real client IP address by parsing Vercel Edge proxy headers
   const forwardedFor = request.headers.get('x-forwarded-for');
   const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : request.ip || 'unknown';
 
-  // 3. Verificamos si la IP del cliente está en nuestra lista blanca
+  // 3. Verify whether the client IP exists within the security allowlist
   if (!allowedList.includes(clientIp)) {
-    console.log(`[Security Firewall] Acceso denegado a la IP: ${clientIp}`);
+    console.log(`[Edge Security Firewall] Access denied for IP: ${clientIp}`);
     return new NextResponse(
       JSON.stringify({ 
         error: "Access Denied - Prisma AIRS Edge Security Block",
-        detected_ip: clientIp // Mostramos la IP temporalmente para que sepas cuál añadir
+        detected_ip: clientIp // Temporarily exposes detected IP to facilitate allowlist configuration
       }),
       { status: 403, headers: { 'content-type': 'application/json' } }
     );
@@ -26,5 +27,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/retail/:path*', '/api/:path*'], // Protege tanto la UI como la API
+  matcher: ['/retail/:path*', '/api/:path*'], // Enforces edge perimeter protection for both UI and API routes
 };
