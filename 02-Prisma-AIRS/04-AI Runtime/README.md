@@ -1,0 +1,79 @@
+# 04. Prisma AIRS - AI Runtime Security (AI Runtime API & AI Runtime Firewall)
+
+## Introduction
+
+The **Prisma AIRS AI Runtime Security** module delivers end-to-end, real-time threat prevention, data privacy compliance, and inline security posture for artificial intelligence workloads. It encompasses two core enforcement vectors designed to protect GenAI applications across multi-cloud environments (Azure OpenAI, AWS Bedrock, GCP Vertex AI, ...):
+
+1. **AI Runtime API (Application & Gateway Integration):** Provides high-performance, low-latency API-level inline payload inspection, Prompt Injection prevention, and Enterprise DLP directly within application backend routes and AI Gateways. *(Implemented in Phase 1)*
+2. **AI Runtime Firewall (Network & L4-L7 Perimeter Enforcement):** Provides deep network-level inspection, VPC/VNet transit protection, and L4-L7 traffic controls for enterprise AI pipelines, model training environments, and egress traffic. *(Configured in Phase 2)*
+
+This module (`04-AI-Runtime`) serves as the single unified architecture hub for **both** the **AI Runtime API** and the **AI Runtime Firewall (FW)** under **Palo Alto Networks Strata Cloud Manager (SCM)**.
+
+> 📘 **Official Documentation Reference:**  
+> [Palo Alto Networks - Configure AI Runtime Security Administration Guide](https://docs.paloaltonetworks.com/ai-runtime-security/administration)
+
+---
+
+## 🏛️ Module Architecture: Dual Protection Pillars
+
+| Protection Pillar | Scope & Placement | Enforcement Layer | Primary Capabilities |
+| :--- | :--- | :--- | :--- |
+| **AI Runtime API** | Application Code, Next.js Middleware, AI Gateway Hooks | L7 Payload / REST API | Prompt Injection blocking, Jailbreak detection, Modulo 23 DNI DLP, $0.00 Upstream FinOps interception |
+| **AI Runtime Firewall (FW)** | Cloud Perimeters (Azure VNet, AWS VPC, GCP VPC), Transit Hubs | L4–L7 Network Traffic | Inline packet inspection, malicious IP/URL filtering, outbound exfiltration blocking, A2A network isolation |
+
+---
+
+## Step-by-Step Deployment Guide: Phase 1 — AI Runtime API
+
+### 1. Licensing and Activation (FinOps & SecOps Alignment)
+
+AI Runtime Security inspection (API and Firewall) is metered using **Palo Alto Networks Flex Credits**. 
+
+From a **FinOps** perspective across Azure, AWS, and GCP, executing inline inspection at the runtime layer prevents malicious actors from exhausting model quotas (Tokens-Per-Minute / Requests-Per-Minute) or triggering runaway inference costs ("Denial of Wallet" attacks).
+
+* **Token Metering Baseline:** $1 \text{ token} \approx 4 \text{ characters}$ of text (industry standard).
+* **Sizing:** License your tenant according to the expected monthly inspection volume across API payloads and firewall traffic transit.
+
+#### Activation Steps
+
+* In **Strata Cloud Manager (SCM)**, allocate Flex Credits to **AI Runtime Security**.
+* Bind the Deployment Profile to your **Tenant Service Group (TSG)**.  
+  > ⚠️ The Tenant Service Group (TSG) **MUST be located in a supported Region**.
+
+---
+
+
+### 2. AI Security Profile Configuration in SCM
+
+AI Security Profiles define the unified security policies, threat signatures, and DLP rules enforced by both the **AI Runtime API** and the **AI Runtime Firewall**.
+
+#### Step 1: Create the Security Profile
+
+1. Access **Strata Cloud Manager** ([stratacloudmanager.paloaltonetworks.com](https://stratacloudmanager.paloaltonetworks.com/)).
+2. Navigate to **AI Security** -> **AI Security Policies** -> **Runtime Profiles**.
+3. Click **Add Profile** and configure:
+   * **Profile Name:** `rt-api-public-chatbots-profile`
+   * **Description:** `Unified Runtime Security Profile for API and Firewall enforcement`
+4. Under **Threat Prevention**, enable real-time inline detection:
+   * **Prompt Injection & Jailbreak:** Set Action to **Block**
+   * **Agentic Abuses / Malicious Intent:** Set Action to **Block**
+   * **Toxic & Unsafe Content:** Set Action to **Block**
+   * **Malicious / Source Code Leaks:** Set Action to **Block**
+
+#### Step 3: Configure Enterprise DLP (GDPR & Spain DNI Rules)
+
+1. Switch to the **Data Loss Prevention (DLP)** tab within the profile configuration.
+2. Enable the **GDPR Compliance Group**.
+4. Click **Save & Publish** to activate the policy across both API hooks and Firewall engines.
+
+---
+
+### 4. Provisioning Deployment Profiles & Obtaining Profile Credentials
+
+Generate a **Deployment Profile ID** to link API calls and Network Firewall rules to your security policy.
+
+1. In SCM, navigate to **AI Security** -> **AI Security Policies** -> **Deployment Profiles**.
+2. Click **Create Deployment Profile**, set Name to `dp-retail-production`, and assign the Security Profile (`rt-api-public-chatbots-profile`).
+3. Save the profile and record the generated **Profile ID** (e.g., `c25d4fe8-15e4-4171-9e3d-166b3173f644`) and **API Token**.
+
+---
