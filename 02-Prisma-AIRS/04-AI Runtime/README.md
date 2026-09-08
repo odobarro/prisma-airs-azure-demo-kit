@@ -67,4 +67,4 @@ AI Security Profiles define the unified security policies, threat signatures, an
    <p align="center">
    <img src="./images/Content_1.png" alt="Content" width="750"/>
    </p>
-   * Remaining options (default)
+   * **Remaining options**: default
