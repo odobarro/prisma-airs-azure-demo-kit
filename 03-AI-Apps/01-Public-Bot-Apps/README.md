@@ -42,10 +42,10 @@ This project uses **Next.js (App Router)** and is deployed globally on **Vercel 
 
 ## Prerequisites
 
-Before deploying this frontend application, you must have the foundational cloud infrastructure and Prisma AIRS configurations fully provisioned:
+Before deploying this frontend application, you must have the foundational cloud infrastructure and Prisma AIRS AI Gateway configurations fully provisioned:
 
 1. **Azure Infrastructure:** Ensure the backend Azure OpenAI service (`gpt-4.1-mini`) is active. Reference the deployment guide here: `../../01-azure-openai-infrastructure/`
-2. **Prisma AIRS AI Gateway:** Ensure your Portkey Data Plane is configured with valid Virtual Keys pointing to your Azure endpoint. Reference the setup guide here: `../../02-Prisma-AIRS/01-AI-Gateway/`
+2. **Prisma AIRS AI Gateway:** Ensure your AI Gateway Data Plane is configured with valid Virtual Keys pointing to your Azure endpoint. Reference the setup guide here: `../../02-Prisma-AIRS/01-AI-Gateway/`
 
 ---
 
