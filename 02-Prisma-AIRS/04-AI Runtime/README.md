@@ -78,16 +78,16 @@ AI Security Profiles define the unified security policies, threat signatures, an
 3. Click **Manage**, select **Applications** and select **Add New Application/API Key**:
     * In the Onboard API Account, select the **Deployment Profile (DP)** to begin API onboarding, then click Next
     * In the Add Application (Agent) screen, specify the following:
-        Include an Application Name: **chatbot-pubic-app**
-        Use the drop-down to select a Cloud Provider and select **Azure**
-        Select the Environment: **Prod**
-        Select the AI Agent Framework: blank
-        Enter a Webhook Secret: blank
-        Use the toggle to enable the Security Profile; use the drop-down to link the existing security profile or choose which profile to use in your app code: **rt-api-public-chatbots-profile**
+        * Include an Application Name: **chatbot-pubic-app**
+        * Use the drop-down to select a Cloud Provider and select **Azure**
+        * Select the Environment: **Prod**
+        * Select the AI Agent Framework: blank
+        * Enter a Webhook Secret: blank
+         *Use the toggle to enable the Security Profile; use the drop-down to link the existing security profile or choose which profile to use in your app code: **rt-api-public-chatbots-profile**
     * Click Next
     * In the Input API Details page:
-        Enter a name API Key Name: **api-key-public-chatbot**
-        Use the drop-down to select the key Rotation.
-        Click Generate API Key.
-        The Implement API Key screen appears, with the generated API key
+        * Enter a name API Key Name: **api-key-public-chatbot**
+        * Use the drop-down to select the key Rotation.
+        * Click Generate API Key.
+        * The Implement API Key screen appears, with the generated API key
     * Click **Done**.
