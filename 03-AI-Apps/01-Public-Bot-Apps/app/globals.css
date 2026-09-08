@@ -1,3 +1,4 @@
+/* Force Tailwind recompilation */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
