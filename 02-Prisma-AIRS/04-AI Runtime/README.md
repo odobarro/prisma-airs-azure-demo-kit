@@ -60,7 +60,7 @@ AI Security Profiles define the unified security policies, threat signatures, an
    * **Toxic & Unsafe Content:** Set Action to **Block**
    * **Malicious / Source Code Leaks:** Set Action to **Block**
 
-#### Step 3: Configure Enterprise DLP (GDPR & Spain DNI Rules)
+#### Step 2: Configure Enterprise DLP (GDPR & Spain DNI Rules)
 
 1. Switch to the **Data Loss Prevention (DLP)** tab within the profile configuration.
 2. Enable the **GDPR Compliance Group**.
@@ -68,7 +68,7 @@ AI Security Profiles define the unified security policies, threat signatures, an
 
 ---
 
-### 4. Provisioning Deployment Profiles & Obtaining Profile Credentials
+### 3. Provisioning Deployment Profiles & Obtaining Profile Credentials
 
 Generate a **Deployment Profile ID** to link API calls and Network Firewall rules to your security policy.
 
