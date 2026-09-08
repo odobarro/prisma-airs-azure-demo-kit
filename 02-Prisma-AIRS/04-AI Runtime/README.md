@@ -53,19 +53,8 @@ AI Security Profiles define the unified security policies, threat signatures, an
 #### Step 1: Create the Security Profile
 
 1. Access **Strata Cloud Manager** ([stratacloudmanager.paloaltonetworks.com](https://stratacloudmanager.paloaltonetworks.com/)).
-2. Navigate to **AI Security** -> **AI Security Policies** -> **Runtime Profiles**.
-3. Click **Add Profile** and configure:
+2. Navigate to **AI Security** -> **AI Runtime** -> **Configurations**.
+3. Click **Create New** and configure:
    * **Profile Name:** `rt-api-public-chatbots-profile`
-   * **Description:** `Unified Runtime Security Profile for API and Firewall enforcement`
-4. Under **Threat Prevention**, enable real-time inline detection:
-   * **Prompt Injection & Jailbreak:** Set Action to **Block**
-   * **Agentic Abuses / Malicious Intent:** Set Action to **Block**
-   * **Toxic & Unsafe Content:** Set Action to **Block**
-   * **Malicious / Source Code Leaks:** Set Action to **Block**
-
-#### Step 2: Configure Enterprise DLP (GDPR & Spain DNI Rules)
-
-1. Switch to the **Data Loss Prevention (DLP)** tab within the profile configuration.
-2. Enable the **GDPR Compliance Group**.
-4. Click **Save & Publish** to activate the policy across both API hooks and Firewall engines.
+   * Under **AI Security:**
 
