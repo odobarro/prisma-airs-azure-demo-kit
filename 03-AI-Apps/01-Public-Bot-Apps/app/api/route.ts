@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
 
-/**
- * Vertical Configuration Mapping
- * Centralizes System Prompts and FinOps/SecOps Metadata per business unit.
- */
 interface VerticalConfig {
   systemPrompt: string;
   userId: string;
@@ -24,7 +20,6 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
     appName: 'public-finance-portal',
     verticalTag: 'financial-services'
   },
-  // AÑADE ESTO PARA SOPORTAR LA NUEVA PÁGINA
   industry: {
     systemPrompt: 'You are the engineering AI Copilot for NovaIndustry Corp. Provide technical information regarding heavy machinery, maintenance schedules, and basic safety rules. NEVER output CAD blueprints, OT configurations, or proprietary source code.',
     userId: 'chatbot-industry-engineering',
@@ -33,53 +28,42 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
   }
 };
 
-/**
- * Next.js Unified Backend Route for Prisma AIRS (Portkey Gateway + Idira Engine)
- */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, vertical = 'retail' } = body;
+    
+    // NEW: Extract secureMode toggle from frontend (Defaults to true for safety)
+    const { messages, vertical = 'retail', secureMode = true } = body;
 
-    // 1. Resolve configuration context based on incoming vertical parameter
     const config = VERTICAL_CONFIGS[vertical] || VERTICAL_CONFIGS.retail;
-
-    // 2. FinOps Optimization: Extract last user query to stabilize vector embeddings for Semantic Caching
     const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop();
 
-    // 3. Build lightweight payload (Vertical-specific System Prompt + Last User Query)
-    const optimizedMessages = [
-      { role: 'system', content: config.systemPrompt }
-    ];
+    const optimizedMessages = [{ role: 'system', content: config.systemPrompt }];
+    if (lastUserMessage) optimizedMessages.push(lastUserMessage);
 
-    if (lastUserMessage) {
-      optimizedMessages.push(lastUserMessage);
-    }
-
-    // 4. Construct Portkey Gateway Headers with Dynamic SecOps/FinOps Metadata
     const gatewayUrl = process.env.PORTKEY_GATEWAY_URL || 'https://api.portkey.ai/v1';
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-portkey-api-key': process.env.PORTKEY_API_KEY || '',
       'x-portkey-virtual-key': process.env.PORTKEY_VIRTUAL_KEY || '',
-      
-      // Dynamic Metadata Injection for Portkey & Strata Cloud Manager (SCM) Observability
       'x-portkey-metadata': JSON.stringify({
         _user: config.userId,
         vertical: config.verticalTag,
         app_name: config.appName,
         environment: 'demo-production',
         cloud_provider: 'azure',
-        security_tier: 'high-enforcement'
+        // Tag traffic dynamically so we can filter unprotected traffic in SCM
+        security_tier: secureMode ? 'high-enforcement' : 'unprotected-bypass'
       })
     };
 
-    if (process.env.PORTKEY_CONFIG_ID) {
+    // --- PRISMA AIRS L7 BYPASS LOGIC ---
+    // Only attach Idira Engine Guardrails if the UI toggle is ON
+    if (secureMode && process.env.PORTKEY_CONFIG_ID) {
       headers['x-portkey-config'] = process.env.PORTKEY_CONFIG_ID;
     }
 
-    // 5. Dispatch request to Prisma AIRS AI Gateway
     const response = await fetch(`${gatewayUrl}/chat/completions`, {
       method: 'POST',
       headers,
@@ -93,7 +77,6 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    // 6. Intercept Idira Engine L7 Security Policy Blocks (HTTP 446, 400, 403, or hooks_failed)
     const isSecurityBlock = 
       response.status === 446 || 
       response.status === 400 || 
@@ -110,23 +93,13 @@ export async function POST(req: Request) {
         : `🛡️ **Request Blocked by Security (Prisma AIRS - ${config.verticalTag.toUpperCase()})**\n\nThe L7 security engine (Idira Engine / Palo Alto Networks) intercepted a risk pattern, prompt injection, or data exfiltration attempt. The request to Azure OpenAI has been canceled.`;
 
       return NextResponse.json({
-        choices: [
-          {
-            message: {
-              role: 'assistant',
-              content: blockMessage
-            }
-          }
-        ]
+        choices: [{ message: { role: 'assistant', content: blockMessage } }]
       });
     }
 
     return NextResponse.json(data);
   } catch (error) {
     console.error('[Prisma AIRS Gateway Error]:', error);
-    return NextResponse.json(
-      { error: 'Failed to communicate with AI Gateway pipeline' }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to communicate with AI Gateway pipeline' }, { status: 500 });
   }
 }
