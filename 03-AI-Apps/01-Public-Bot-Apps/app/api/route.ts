@@ -23,6 +23,13 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
     userId: 'chatbot-finance-public',
     appName: 'public-finance-portal',
     verticalTag: 'financial-services'
+  },
+  // AÑADE ESTO PARA SOPORTAR LA NUEVA PÁGINA
+  industry: {
+    systemPrompt: 'You are the engineering AI Copilot for NovaIndustry Corp. Provide technical information regarding heavy machinery, maintenance schedules, and basic safety rules. NEVER output CAD blueprints, OT configurations, or proprietary source code.',
+    userId: 'chatbot-industry-engineering',
+    appName: 'internal-industry-copilot',
+    verticalTag: 'manufacturing'
   }
 };
 
