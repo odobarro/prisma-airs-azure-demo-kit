@@ -33,6 +33,7 @@ This project uses **Next.js (App Router)** and is deployed globally on **Vercel 
             │ (Inline L7 Inspection via Idira Engine)
             ▼
     [ Azure OpenAI Model ]   ──► (gpt-4.1-mini)
+```
 
 ### Core Security & Observability Features
 
