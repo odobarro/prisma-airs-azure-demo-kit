@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * Vertical Configuration Mapping
+ * Centralizes System Prompts and FinOps/SecOps Metadata per business unit.
+ */
 interface VerticalConfig {
   systemPrompt: string;
   userId: string;
@@ -31,9 +35,7 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    
-    // NEW: Extract secureMode toggle from frontend (Defaults to true for safety)
-    const { messages, vertical = 'retail', secureMode = true } = body;
+    const { messages, vertical = 'retail' } = body;
 
     const config = VERTICAL_CONFIGS[vertical] || VERTICAL_CONFIGS.retail;
     const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop();
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
     if (lastUserMessage) optimizedMessages.push(lastUserMessage);
 
     const gatewayUrl = process.env.PORTKEY_GATEWAY_URL || 'https://api.portkey.ai/v1';
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-portkey-api-key': process.env.PORTKEY_API_KEY || '',
@@ -53,14 +55,12 @@ export async function POST(req: Request) {
         app_name: config.appName,
         environment: 'demo-production',
         cloud_provider: 'azure',
-        // Tag traffic dynamically so we can filter unprotected traffic in SCM
-        security_tier: secureMode ? 'high-enforcement' : 'unprotected-bypass'
+        security_tier: 'high-enforcement'
       })
     };
 
-    // --- PRISMA AIRS L7 BYPASS LOGIC ---
-    // Only attach Idira Engine Guardrails if the UI toggle is ON
-    if (secureMode && process.env.PORTKEY_CONFIG_ID) {
+    // Always attach Idira Guardrail Configuration if present in environment
+    if (process.env.PORTKEY_CONFIG_ID) {
       headers['x-portkey-config'] = process.env.PORTKEY_CONFIG_ID;
     }
 
@@ -77,6 +77,7 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
+    // Intercept Prisma AIRS / Idira Security Policy Blocks
     const isSecurityBlock = 
       response.status === 446 || 
       response.status === 400 || 
