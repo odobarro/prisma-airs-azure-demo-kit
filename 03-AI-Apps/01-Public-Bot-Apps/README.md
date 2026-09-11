@@ -1,16 +1,17 @@
 # 01-Public-Bot-Apps: Sector-Specific AI Chatbots
 
-This directory contains lightweight, public-facing web applications designed to simulate external AI consumption across different industry verticals. 
+This directory contains lightweight, public-facing web applications designed to simulate external AI consumption across different industry verticals (**Retail**, **Financial Services**, and **Manufacturing/IoT**). 
 
-As public interfaces exposed to unauthenticated users, these applications represent the highest risk surface for **Denial of Wallet (DoW)** attacks, **Prompt Injection**, and **Data Exfiltration**. They serve as the primary testing ground for partners to demonstrate **Palo Alto Networks Prisma AIRS** capabilities (AI Gateway, Idira inspection engine, FinOps, and threat prevention) in action.
+As public interfaces exposed to unauthenticated users, these applications represent the highest risk surface for **Denial of Wallet (DoW)** attacks, **Prompt Injection**, **Jailbreaks**, and **Data Exfiltration (PII/PCI/IP)**. They serve as the primary demonstration environment for partners to showcase **Palo Alto Networks Prisma AIRS** capabilities (AI Gateway, Idira inspection engine, FinOps, and threat prevention) in action.
 
 ---
 
-## Deployed Verticals
+## Deployed Verticals & Entry Points
 
-* `/app/retail` - Simulates a retail customer service and e-commerce portal with an embedded AI assistant.
-* *(Future)* `/app/finance` - Simulates a banking assistant handling sensitive queries.
-* *(Future)* `/app/industry` - Simulates a manufacturing or technical support agent.
+* `/` - **Executive Demo Hub:** Central vertical selector and multi-cloud architectural overview.
+* `/retail` - **NovaRetail Store:** E-commerce portal simulating fraud vectors (unauthorized discounts, reputational damage, and shipping policy semantic caching).
+* `/finance` - **NovaFinance Bank:** FSI banking assistant handling sensitive queries, PCI-DSS credit card DLP, and unauthorized loan approval attempts.
+* `/industry` - **NovaIndustry Corp:** Manufacturing and OT/IoT portal testing IP theft (CAD blueprints/source code) and machinery override sabotage.
 
 ---
 
@@ -18,17 +19,18 @@ As public interfaces exposed to unauthenticated users, these applications repres
 
 This project uses **Next.js (App Router)** and is deployed globally on **Vercel Edge Functions**. It incorporates a multi-layer defense-in-depth architecture:
 
+```text
     [ Client Browser ] 
             │
             ▼
     [ Vercel Edge Firewall ] ──► (middleware.ts: IP Whitelist)
             │ (200 OK)
             ▼
-    [ Next.js API Handler ]  ──► (app/api/route.ts: POST /api - SCM Metadata)
+    [ Next.js API Handler ]  ──► (app/api/route.ts: POST /api - Dynamic Context & SCM Metadata)
             │
             ▼
-    [ Prisma AIRS Gateway ]  ──► (aigw.portkey.ai)
-            │
+    [ Prisma AIRS Gateway ]  ──► (aigw.portkey.ai / Portkey SDK)
+            │ (Inline L7 Inspection via Idira Engine)
             ▼
     [ Azure OpenAI Model ]   ──► (gpt-4.1-mini)
 
@@ -85,11 +87,11 @@ Click **Deploy**. Vercel will build and host the application globally at the Edg
 
 ## Edge IP Security & Troubleshooting Workflow
 
-When accessing the deployed application at `https://<your-vercel-domain>/retail`, you may encounter an **Access Denied (403)** error due to ISP network routing (IPv4 vs. IPv6 switching).
+When accessing any portal endpoint (`https://<your-vercel-domain>/` or sub-routes `/retail`, `/finance`, `/industry`), you may encounter an **Access Denied (403)** error due to ISP network routing (such as dynamic IPv4 vs. IPv6 switching).
 
-1. **Identify Received IP:** The custom `middleware.ts` returns a JSON payload displaying your detected client IP.
-2. **Update Environment Variable:** In Vercel, go to **Settings** > **Environment Variables**. Edit `ALLOWED_IP` and append the detected IP (separated by a comma). Click **Save**.
-3. **Trigger Edge Redeploy (Mandatory):** Go to the **Deployments** tab in Vercel, click the three dots (`...`) next to the latest deployment, and select **Redeploy**. *Edge Functions compile environment variables at build time; a redeploy is required.*
+1. **Identify Received IP:** The custom `middleware.ts` intercepts incoming traffic across all routes and returns a structured JSON diagnostic payload displaying your detected public client IP.
+2. **Update Environment Variable:** In Vercel, navigate to **Project Settings** > **Environment Variables**. Edit `ALLOWED_IP` and append the newly detected IP (separated by a comma). Click **Save**.
+3. **Trigger Edge Redeploy (Mandatory):** Go to the **Deployments** tab in Vercel, click the overflow menu (`...`) next to the latest build, and select **Redeploy**. *Vercel Edge Functions compile environment variables at build time; a redeploy is strictly required for IP whitelist changes to propagate globally.*
 
 ---
 
@@ -106,11 +108,14 @@ Once the portal is accessible and connected to the AI Gateway, execute security 
 
 ## File Structure & Usage
 
-| File / Path | Purpose | Environment Configuration |
+| File / Path | Purpose | Access & Environment Configuration |
 | :--- | :--- | :--- |
-| `middleware.ts` | Edge IP restriction firewall. | Controlled via `ALLOWED_IP` in Vercel Environment Variables. |
-| `app/api/route.ts` | Backend API handler routing traffic to Prisma AIRS. | Adjust metadata or model aliases in payload if needed. |
-| `app/retail/page.tsx` | Retail UI with embedded AI chat widget. | Accessible at `https://<your-vercel-domain>/retail`. |
+| `middleware.ts` | Layer 7 Edge IP restriction firewall protecting all application routes against DoW attacks. | Controlled via `ALLOWED_IP` in Vercel Environment Variables. |
+| `app/page.tsx` | Executive Demo Hub landing page for selecting active vertical environments. | Accessible at `https://<your-vercel-domain>/`. |
+| `app/api/route.ts` | Unified multi-vertical backend API handler routing traffic through Portkey Gateway & Idira Engine. | Dynamically processes `vertical` payloads and injects SecOps metadata (`_user`, `vertical`, `app_name`). |
+| `app/retail/page.tsx` | NovaRetail Store UI with embedded floating AI chat widget. | Accessible at `https://<your-vercel-domain>/retail`. |
+| `app/finance/page.tsx` | NovaFinance Bank UI with embedded floating AI chat widget. | Accessible at `https://<your-vercel-domain>/finance`. |
+| `app/industry/page.tsx` | NovaIndustry Corp UI with embedded floating AI chat widget. | Accessible at `https://<your-vercel-domain>/industry`. |
 
 ---
 
@@ -223,9 +228,11 @@ After executing an attack scenario, Strata Cloud Manager (SCM) provides end-to-e
      ```
   6. Under the **Guardrails** section, confirm the execution status displays **`unsuccessful`**, indicating that Prisma AIRS successfully intercepted and blocked the payload.
   7. Verify that total token usage billed to Azure OpenAI displays **0 tokens** ($0.00 cost).
+  8. **Verify User Identity & Tenant Attribution:** Check the **User** column and the metadata section of the log. Confirm it displays the specific vertical identity (e.g., `chatbot-retail-public`, `chatbot-finance-public`, or `chatbot-industry-engineering`) instead of `(not set)`. This validates the successful injection of FinOps metadata from the Next.js API proxy.
 
 * **AI Runtime API Perspective (SecOps & Threat Analysis Logs):**
   1. Navigate to **AI Security** -> **AI Runtime** -> **API Violations**.
   2. Filter by Application (**`Portkey-azure-openai`**), Security Profile (**`rt-api-public-chatbots-profile`**), or search for the specific **Scan ID** / **Report ID**.
   3. Click on the intercepted event entry to review the blocked violation report generated by the Idira inspection engine.
-  4. Inspect the granular threat triggers
+  4. Inspect the granular threat triggers (e.g., *Prompt Injection*, *PCI-DSS Match*, *Jailbreak*). 
+  5. **Verify Threat Attribution:** Confirm that the security violation is accurately attributed to the corresponding vertical user context (e.g., `chatbot-finance-public`), demonstrating granular threat tracking across a multi-tenant application environment.
