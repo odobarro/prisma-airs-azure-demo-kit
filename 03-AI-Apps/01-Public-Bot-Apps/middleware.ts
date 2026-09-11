@@ -27,5 +27,11 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/retail/:path*', '/api/:path*'], // Enforces edge perimeter protection for both UI and API routes
+  matcher: [
+    '/',                     // Executive Demo Hub (Página inicial)
+    '/retail/:path*',        // Portal Retail
+    '/finance/:path*',       // Portal Finanzas
+    '/industry/:path*',      // Portal Industria
+    '/api/:path*'            // Proxy backend al AI Gateway de Prisma AIRS
+  ],
 };
