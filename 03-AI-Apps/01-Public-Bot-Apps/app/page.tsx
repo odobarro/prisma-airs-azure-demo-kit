@@ -9,7 +9,6 @@ import Link from 'next/link';
 export default function CentralHubPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Bar Navigation Header */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -19,15 +18,12 @@ export default function CentralHubPage() {
             </span>
           </div>
           <div className="text-xs text-slate-400 hidden sm:block">
-            Palo Alto Networks • Portkey AI Gateway & Idira Engine Integration
+            Palo Alto Networks • AI Gateway & Runtime Protection
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
       <main className="flex-grow max-w-7xl mx-auto px-6 py-16 flex flex-col justify-center items-center w-full">
-        
-        {/* Architecture Hero Title */}
         <div className="text-center max-w-3xl mb-12 space-y-4">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
             AI Security & FinOps Environments
@@ -37,12 +33,12 @@ export default function CentralHubPage() {
           </p>
         </div>
 
-        {/* Vertical Selector Grid (Updated to 3 columns) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-          
-          {/* RETAIL PORTAL CARD */}
+          {/* RETAIL PORTAL */}
           <Link 
             href="/retail"
+            target="_blank"
+            rel="noopener noreferrer"
             className="group relative bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 flex flex-col justify-between h-full"
           >
             <div className="space-y-4">
@@ -62,14 +58,16 @@ export default function CentralHubPage() {
             <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col space-y-2">
               <div className="text-xs font-semibold text-indigo-400 flex items-center justify-between">
                 <span>Launch Retail Demo</span>
-                <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                <span className="transform group-hover:translate-x-1 transition-transform">↗</span>
               </div>
             </div>
           </Link>
 
-          {/* FINANCE PORTAL CARD */}
+          {/* FINANCE PORTAL */}
           <Link 
             href="/finance"
+            target="_blank"
+            rel="noopener noreferrer"
             className="group relative bg-slate-900 border border-slate-800 hover:border-blue-500 rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 flex flex-col justify-between h-full"
           >
             <div className="space-y-4">
@@ -89,14 +87,16 @@ export default function CentralHubPage() {
             <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col space-y-2">
               <div className="text-xs font-semibold text-blue-400 flex items-center justify-between">
                 <span>Launch Finance Demo</span>
-                <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                <span className="transform group-hover:translate-x-1 transition-transform">↗</span>
               </div>
             </div>
           </Link>
 
-          {/* INDUSTRY PORTAL CARD (NEW) */}
+          {/* INDUSTRY PORTAL */}
           <Link 
             href="/industry"
+            target="_blank"
+            rel="noopener noreferrer"
             className="group relative bg-slate-900 border border-slate-800 hover:border-emerald-500 rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/10 flex flex-col justify-between h-full"
           >
             <div className="space-y-4">
@@ -116,18 +116,13 @@ export default function CentralHubPage() {
             <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col space-y-2">
               <div className="text-xs font-semibold text-emerald-400 flex items-center justify-between">
                 <span>Launch Industry Demo</span>
-                <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                <span className="transform group-hover:translate-x-1 transition-transform">↗</span>
               </div>
             </div>
           </Link>
 
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600 mt-auto">
-        Prisma AIRS Multi-Vertical Architecture • Palo Alto Networks 2026
-      </footer>
     </div>
   );
 }
