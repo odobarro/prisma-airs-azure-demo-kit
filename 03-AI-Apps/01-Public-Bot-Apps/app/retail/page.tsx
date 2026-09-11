@@ -20,9 +20,13 @@ export default function RetailPage() {
 
   /**
    * Triggers smooth auto-scrolling to the bottom anchor element.
+   * Uses a micro-timeout to ensure React has painted the new DOM elements 
+   * (messages or loading indicators) before calculating the scroll height.
    */
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
   };
 
   // Automatically execute scroll whenever new messages arrive or loading state updates
