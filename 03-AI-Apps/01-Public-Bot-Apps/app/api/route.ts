@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       })
     };
 
-    // Always attach Idira Guardrail Configuration if present in environment
+    // Always attach Prisma AIRS Guardrail Configuration if present in environment
     if (process.env.PORTKEY_CONFIG_ID) {
       headers['x-portkey-config'] = process.env.PORTKEY_CONFIG_ID;
     }
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    // Intercept Prisma AIRS / Idira Security Policy Blocks
+    // Intercept Prisma AIRS Security Policy Blocks (HTTP 446, 400, 403, or hooks_failed)
     const isSecurityBlock = 
       response.status === 446 || 
       response.status === 400 || 
@@ -89,9 +89,10 @@ export async function POST(req: Request) {
       const isSpanish = /[áéíóúñ¿¡]/i.test(userContent) || 
                         /\b(hola|que|como|donde|cuanto|precio|envio|descuento|politica|prestamo|tarjeta|cuenta)\b/i.test(userContent);
 
+      // Bloqueo minimalista, exacto y sin fuga de información de infraestructura
       const blockMessage = isSpanish
-        ? `🛡️ **Solicitud Bloqueada por Seguridad (Prisma AIRS - ${config.verticalTag.toUpperCase()})**\n\nEl motor de seguridad L7 (Idira Engine / Palo Alto Networks) ha interceptado un patrón de riesgo, inyección de prompt o intento de exfiltración de datos. La llamada a Azure OpenAI ha sido cancelada.`
-        : `🛡️ **Request Blocked by Security (Prisma AIRS - ${config.verticalTag.toUpperCase()})**\n\nThe L7 security engine (Idira Engine / Palo Alto Networks) intercepted a risk pattern, prompt injection, or data exfiltration attempt. The request to Azure OpenAI has been canceled.`;
+        ? `🛡️ **Solicitud Bloqueada por Seguridad (Prisma AIRS)**`
+        : `🛡️ **Request Blocked by Security (Prisma AIRS)**`;
 
       return NextResponse.json({
         choices: [{ message: { role: 'assistant', content: blockMessage } }]
