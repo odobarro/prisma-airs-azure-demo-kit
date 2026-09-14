@@ -36,9 +36,9 @@ From a **FinOps** perspective across Azure, AWS, and GCP, executing inline inspe
 
 #### Activation Steps
 
-* Create a **Deployment Profile (DP)** in Strata Cloud Manager (SCM) and allocate Flex Credits to AI Runtime Security (API).
+* Create a **Deployment Profile (DP)** in your Customer Support Portal (CSP) and allocate Flex Credits to AI Runtime Security (API).
 * Map the Deployment Profile to a **Tenant Service Group (TSG)**.  
-  > ⚠️ The Tenant Service Group (TSG) **MUST be located in the Americas Region**.
+  > ⚠️ The Tenant Service Group (TSG) **MUST be located in a supported Region**.
 * Launch SCM to complete setup and configuration.
 
 > 📘 **Official Documentation Reference:**  

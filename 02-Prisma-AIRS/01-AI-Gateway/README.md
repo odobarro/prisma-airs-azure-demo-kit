@@ -25,7 +25,7 @@ AI Gateway is licensed using **Palo Alto Networks Flex Credits**. All metering i
 
 #### Activation Steps
 
-* Create a **Deployment Profile (DP)** in Strata Cloud Manager (SCM) and allocate Flex Credits to AI Gateway.
+* Create a **Deployment Profile (DP)** in your Customer Support Portal (CSP) and allocate Flex Credits to AI Gateway.
 * Indicate preferred deployment mode (*SaaS* or *Hybrid*) — tracking purpose only, not enforced.
 * Map the Deployment Profile to a **Tenant Service Group (TSG)** to link SCM and the Licensing System (SLS) to AI Gateway.  
   > ⚠️ The Tenant Service Group (TSG) **MUST be located in the Americas Region**.
