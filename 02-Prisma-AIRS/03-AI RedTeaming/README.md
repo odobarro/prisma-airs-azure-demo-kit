@@ -15,9 +15,9 @@ Prisma AIRS AI Red Teaming helps you to:
 
 Before initiating the AI Red Teaming setup, ensure the foundational inference and control layers are configured. This module builds upon the architecture established in previous steps:
 
-* [**Module 01: Azure OpenAI**](../01-azure-openai-infrastructure): The underlying LLM compute endpoints must be deployed and active to process the synthetic attack payloads.
-* [**Module 02: AI Gateway (Highly Recommended)**](../02-Prisma-AIRS/01-AI-Gateway): While not strictly mandatory, deploying the enterprise AI Gateway is critical for traffic routing and FinOps token metering. If omitted, the API endpoints and connection configurations detailed in this guide will change, routing traffic directly to the cloud provider.
-* [**Module 02: AI Runtime Security (Optional)**](../02-Prisma-AIRS/04-AI-Runtime): Integrated with the AI Gateway, this layer provides real-time protection. By blocking attacks at the proxy level, it prevents malicious prompts from reaching the LLM, significantly reducing unnecessary token consumption and Azure compute costs.
+* [**Module 01: Azure OpenAI**](../../01-azure-openai-infrastructure/README.md): The underlying LLM compute endpoints must be deployed and active to process the synthetic attack payloads.
+* [**Module 02: AI Gateway (Highly Recommended)**](../01-AI-Gateway/README.md): While not strictly mandatory, deploying the enterprise AI Gateway is critical for traffic routing and FinOps token metering. If omitted, the API endpoints and connection configurations detailed in this guide will change, routing traffic directly to the cloud provider.
+* [**Module 02: AI Runtime Security (Optional)**](../04-AI%20Runtime/README.md): Integrated with the AI Gateway, this layer provides real-time protection. By blocking attacks at the proxy level, it prevents malicious prompts from reaching the LLM, significantly reducing unnecessary token consumption and Azure compute costs.
 
 ## Step 1. Licensing and Activation (FinOps & SecOps Alignment)
 
