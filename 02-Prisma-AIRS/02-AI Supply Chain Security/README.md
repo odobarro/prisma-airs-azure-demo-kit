@@ -72,15 +72,25 @@ Before executing the Terraform deployment, the scanner container image must exis
 
 ### Method A: Automated CI/CD via GitHub Actions (Recommended)
 
-1. **Trigger the Workflow:** Commit and push your local repository changes (including the `app/` directory and `.github/` workflow configuration) to your GitHub repository:
+1. **Trigger the Workflow:** Commit and push your local repository changes (including the `app/` directory and `.github/` workflow configuration) to GitHub:
    ```bash
    git add .
    git commit -m "feat: initialize Prisma AIRS supply chain security module"
    git push origin main
    ```
-2. **Monitor Build Progress:** Open your GitHub repository in the browser, navigate to the **Actions** tab, and select the **Build and Push Scanner Image to GHCR** pipeline to view real-time compilation logs.
-3. **Verify Published Image:** Once the pipeline completes successfully, confirm that the package is available under your account or organization's GHCR packages:
-   `ghcr.io/<YOUR_GITHUB_USERNAME_OR_ORG>/airs-model-scanner:latest`
+
+2. **Monitor Pipeline Execution in GitHub Actions:**
+   * Open your repository in the browser (`https://github.com/<YOUR_GITHUB_USERNAME_OR_ORG>/<YOUR_REPO_NAME>`).
+   * Click on the **Actions** tab in the top repository navigation menu.
+   * In the left sidebar, select the workflow **Build and Push Scanner Image to GHCR**.
+   * Click on the active workflow run (e.g., `feat: initialize Prisma AIRS...`) to view real-time compilation and push logs.
+   * Ensure all steps (`Checkout Code`, `Log in to GHCR`, `Build and Push`) complete with a green checkmark (**✓**).
+
+3. **Verify Published Image in GHCR:**
+   * Navigate to your GitHub Profile or Organization home page.
+   * Select the **Packages** tab (or check the **Packages** section on the right sidebar of the repository main page).
+   * Confirm that the package `airs-model-scanner` is visible and carries the `:latest` tag:
+     `ghcr.io/<YOUR_GITHUB_USERNAME_OR_ORG>/airs-model-scanner:latest`
 
 ---
 
