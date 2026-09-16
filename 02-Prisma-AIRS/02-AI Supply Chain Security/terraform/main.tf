@@ -12,7 +12,7 @@ provider "azurerm" {
   features {}
 }
 
-# 1. Resource Group
+# 1. Resource Group Data Source (Existing Environment)
 data "azurerm_resource_group" "rg" {
   name = var.resource_group_name
 }
@@ -30,7 +30,6 @@ resource "azurerm_container_app" "app" {
   container_app_environment_id = azurerm_container_app_environment.env.id
   resource_group_name          = data.azurerm_resource_group.rg.name
   revision_mode                = "Single"
-}
 
   # Encrypted Secret Store inside ACA
   secret {
