@@ -4,8 +4,8 @@ from typing import Optional
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, status
 from pydantic import BaseModel, HttpUrl
 
-# Import native Palo Alto Networks Model Security SDK
-from model_security_client import ModelSecurityAPIClient
+# Importación oficial según TechDocs de Palo Alto Networks
+from model_security_client.api import ModelSecurityAPIClient
 
 app = FastAPI(title="Prisma AIRS Model Security Scanner")
 logger = logging.getLogger("uvicorn.error")
@@ -19,12 +19,13 @@ class ScanRequest(BaseModel):
 
 def execute_prisma_airs_scan(model_uri: str, security_group_uuid: str):
     """
-    Background worker executing native scan via Palo Alto Networks Model Security SDK.
+    Background worker executing native scan via Prisma AIRS Model Security SDK.
     """
     try:
         logger.info(f"[+] Initializing Prisma AIRS scan for URI: {model_uri}")
         logger.info(f"[+] Targeting Security Group UUID: {security_group_uuid}")
 
+        # Inicialización del cliente AIMS
         client = ModelSecurityAPIClient(
             base_url="https://api.sase.paloaltonetworks.com/aims",
             client_id=os.getenv("PALO_ALTO_CLIENT_ID"),
@@ -62,6 +63,6 @@ async def scan_endpoint(
 
     return {
         "status": "accepted",
-        "message": f"Scan queued successfully for {target_url}. Results will appear in Strata Cloud Manager.",
+        "message": f"Scan queued successfully for {target_url}. Results will appear in SCM.",
         "target": target_url
     }
