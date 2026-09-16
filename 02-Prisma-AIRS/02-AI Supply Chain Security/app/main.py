@@ -3,9 +3,7 @@ import logging
 from typing import Optional
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, status
 from pydantic import BaseModel, HttpUrl
-
-# Importación oficial según TechDocs de Palo Alto Networks
-from model_security_client.api import ModelSecurityAPIClient
+import importlib
 
 app = FastAPI(title="Prisma AIRS Model Security Scanner")
 logger = logging.getLogger("uvicorn.error")
@@ -19,30 +17,39 @@ class ScanRequest(BaseModel):
 
 def execute_prisma_airs_scan(model_uri: str, security_group_uuid: str):
     """
-    Background worker executing native scan via Prisma AIRS Model Security SDK.
+    Background worker con importación dinámica (Keep-Alive pattern)
     """
     try:
-        logger.info(f"[+] Initializing Prisma AIRS scan for URI: {model_uri}")
-        logger.info(f"[+] Targeting Security Group UUID: {security_group_uuid}")
+        logger.info(f"[+] Iniciando escaneo para URI: {model_uri}")
+        
+        # Importación dinámica en tiempo de ejecución para evitar CrashLoopBackOff
+        msc = importlib.import_module("model_security_client")
+        logger.info(f"[DEBUG] Contenido del paquete raíz: {dir(msc)}")
+        
+        # Intentamos obtener el cliente genérico
+        client_class = getattr(msc, "ModelSecurityAPIClient", None)
+        if not client_class:
+            # Si no está en la raíz, miramos si tiene el submódulo .api
+            msc_api = importlib.import_module("model_security_client.api")
+            logger.info(f"[DEBUG] Contenido del submódulo API: {dir(msc_api)}")
+            client_class = getattr(msc_api, "ModelSecurityAPIClient", None)
+            
+        if not client_class:
+            raise ImportError("No se pudo localizar la clase ModelSecurityAPIClient en el SDK.")
 
-        # Inicialización del cliente AIMS
-        client = ModelSecurityAPIClient(
+        # Inicialización del cliente
+        client = client_class(
             base_url="https://api.sase.paloaltonetworks.com/aims",
             client_id=os.getenv("PALO_ALTO_CLIENT_ID"),
             client_secret=os.getenv("PALO_ALTO_CLIENT_SECRET"),
             tsg_id=os.getenv("PALO_ALTO_TSG_ID")
         )
 
-        result = client.scan(
-            security_group_uuid=security_group_uuid,
-            model_uri=model_uri
-        )
-
-        logger.info(f"[+] Scan completed. Outcome: {getattr(result, 'eval_outcome', 'SUCCESS')}")
-        logger.info(f"[+] Scanned Model Version UUID: {getattr(result, 'model_version_uuid', 'N/A')}")
+        result = client.scan(security_group_uuid=security_group_uuid, model_uri=model_uri)
+        logger.info(f"[+] Outcome: {getattr(result, 'eval_outcome', 'SUCCESS')}")
 
     except Exception as e:
-        logger.error(f"[!] Error during Prisma AIRS scan execution: {str(e)}", exc_info=True)
+        logger.error(f"[!] Error ejecutando AIRS: {str(e)}")
 
 @app.post("/api/v1/scan", status_code=status.HTTP_202_ACCEPTED)
 async def scan_endpoint(
@@ -51,18 +58,7 @@ async def scan_endpoint(
     x_api_key: Optional[str] = Header(None)
 ):
     if INTERNAL_API_TOKEN and x_api_key != INTERNAL_API_TOKEN:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid internal API authentication token"
-        )
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-    target_url = str(payload.model_url)
-    group_uuid = payload.group_id or "2baf2bc5-2ae2-42d6-a548-9af6a2cb4c32"
-
-    background_tasks.add_task(execute_prisma_airs_scan, target_url, group_uuid)
-
-    return {
-        "status": "accepted",
-        "message": f"Scan queued successfully for {target_url}. Results will appear in SCM.",
-        "target": target_url
-    }
+    background_tasks.add_task(execute_prisma_airs_scan, str(payload.model_url), payload.group_id)
+    return {"status": "accepted", "message": "Scan queued"}
