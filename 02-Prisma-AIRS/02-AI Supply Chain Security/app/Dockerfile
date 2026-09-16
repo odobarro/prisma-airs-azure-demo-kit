@@ -7,14 +7,14 @@ WORKDIR /app
 
 COPY get_pypi_url.sh /app/
 
-# Convertimos saltos de línea CRLF a LF y damos permisos
+# Convert CRLF line endings to LF and grant execution permissions
 RUN sed -i 's/\r$//' /app/get_pypi_url.sh && chmod +x /app/get_pypi_url.sh
 
 ARG MODEL_SECURITY_CLIENT_ID
 ARG MODEL_SECURITY_CLIENT_SECRET
 ARG TSG_ID
 
-# Generamos la URL en una variable intermedia para verificar que no falle el script
+# Generate the URL in an intermediate variable to verify the script succeeds
 RUN PYPI_URL=$(/app/get_pypi_url.sh) && \
     uv pip install --system --no-cache fastapi uvicorn \
     "model-security-client==1.1.0" --extra-index-url "$PYPI_URL"
