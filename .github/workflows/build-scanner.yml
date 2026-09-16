@@ -25,9 +25,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          # 🛠️ CRÍTICO: Fuerza al motor Buildx a usar el DNS de la máquina host de GitHub
-          driver-opts: network=host 
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -36,19 +33,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch PANW PyPI Token on Host Runner
+        id: get_pypi
+        run: |
+          sed -i 's/\r$//' ./02-Prisma-AIRS/02-AI\ Supply\ Chain\ Security/app/get_pypi_url.sh
+          chmod +x ./02-Prisma-AIRS/02-AI\ Supply\ Chain\ Security/app/get_pypi_url.sh
+          URL=$(./02-Prisma-AIRS/02-AI\ Supply\ Chain\ Security/app/get_pypi_url.sh)
+          echo "pypi_url=${URL}" >> $GITHUB_OUTPUT
+        env:
+          MODEL_SECURITY_CLIENT_ID: ${{ secrets.MODEL_SECURITY_CLIENT_ID }}
+          MODEL_SECURITY_CLIENT_SECRET: ${{ secrets.MODEL_SECURITY_CLIENT_SECRET }}
+          TSG_ID: ${{ secrets.TSG_ID }}
+
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: "./02-Prisma-AIRS/02-AI Supply Chain Security/app"
           file: "./02-Prisma-AIRS/02-AI Supply Chain Security/app/Dockerfile"
           push: true
-          # 🛠️ CRÍTICO: Permite que el script get_pypi_url.sh resuelva auth.sase.paloaltonetworks.com sin exit code 6
-          network: host 
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
-            MODEL_SECURITY_CLIENT_ID=${{ secrets.MODEL_SECURITY_CLIENT_ID }}
-            MODEL_SECURITY_CLIENT_SECRET=${{ secrets.MODEL_SECURITY_CLIENT_SECRET }}
-            TSG_ID=${{ secrets.TSG_ID }}
-          # FinOps: Uso de caché para ahorrar minutos de facturación
+            PYPI_URL=${{ steps.get_pypi.outputs.pypi_url }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
