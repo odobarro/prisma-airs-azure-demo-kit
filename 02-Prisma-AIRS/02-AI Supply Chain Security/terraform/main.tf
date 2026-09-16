@@ -26,10 +26,11 @@ resource "azurerm_container_app_environment" "env" {
 
 # 3. Azure Container App (FinOps Engine: Scale to 0)
 resource "azurerm_container_app" "app" {
-  name                         = "ca-${var.prefix}-${var.container_name}-${var.environment}"
+  name                         = var.container_name
   container_app_environment_id = azurerm_container_app_environment.env.id
-  resource_group_name          = azurerm_resource_group.rg.name
+  resource_group_name          = data.azurerm_resource_group.rg.name
   revision_mode                = "Single"
+}
 
   # Encrypted Secret Store inside ACA
   secret {
