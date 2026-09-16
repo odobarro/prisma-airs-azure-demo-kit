@@ -19,9 +19,9 @@ data "azurerm_resource_group" "rg" {
 
 # 2. Azure Container Apps Environment
 resource "azurerm_container_app_environment" "env" {
-  name                = "cae-${var.prefix}-airs-${var.environment}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  name                = "cae-${var.prefix}-${var.environment}"
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
 }
 
 # 3. Azure Container App (FinOps Engine: Scale to 0)
