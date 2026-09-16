@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -9,7 +9,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir \
     fastapi \
     uvicorn \
-    "model-security-client[all]==1.1.0" --extra-index-url https://pypi.panw.ai/simple
+    "model-security-client==1.1.0" --extra-index-url https://pypi.panw.ai/simple
 
 COPY main.py /app/main.py
 
