@@ -6,11 +6,10 @@ on:
       - main
     paths:
       - '02-Prisma-AIRS/02-AI Supply Chain Security/app/**'
-  workflow_dispatch: # Permite lanzar el pipeline manualmente desde la interfaz de GitHub
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  # Asegúrate de que esto coincida con la ruta de tu imagen en Azure (ej. odobarro/airs-model-scanner)
   IMAGE_NAME: ${{ github.repository_owner }}/airs-model-scanner
 
 jobs:
@@ -18,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Necesario para hacer push a GitHub Container Registry (GHCR)
+      packages: write
 
     steps:
       - name: Checkout repository
@@ -34,7 +33,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-- name: Build and Push Docker Image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: "./02-Prisma-AIRS/02-AI Supply Chain Security/app"
