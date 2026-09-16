@@ -16,6 +16,11 @@ variable "environment" {
   type        = string
   description = "Deployment environment identifier (e.g., dev, stg, prd)."
 }
+variable "resource_group_name" {
+  type        = string
+  description = "Name of the existing Azure Resource Group to deploy the Container App into."
+  # No default value provided to force an interactive prompt if omitted
+}
 
 # ------------------------------------------------------------------------------
 # GitHub Container Registry (GHCR) Settings

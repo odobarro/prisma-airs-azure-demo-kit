@@ -13,9 +13,8 @@ provider "azurerm" {
 }
 
 # 1. Resource Group
-resource "azurerm_resource_group" "rg" {
-  name     = "rg-${var.prefix}-airs-model-sec-${var.environment}"
-  location = var.location
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
 }
 
 # 2. Azure Container Apps Environment
