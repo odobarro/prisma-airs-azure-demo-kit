@@ -3,7 +3,7 @@ name: Build and Push Scanner Image to GHCR
 on:
   push:
     paths:
-      - 'app/**'
+      - '02-Prisma-AIRS/02-AI Supply Chain Security/app/**'
       - '.github/workflows/build-scanner.yml'
     branches: [ main, master ]
 
