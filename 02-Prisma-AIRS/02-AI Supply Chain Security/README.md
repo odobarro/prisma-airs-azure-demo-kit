@@ -42,11 +42,15 @@ This solution deploys a serverless, API-driven orchestration layer that integrat
 
 Ensure the following prerequisites are met prior to beginning the deployment:
 
-* **Azure Cloud:** An active Azure Subscription with privileges to create Resource Groups and Azure Container Apps.
+* **Azure Cloud Subscription:** An active Azure Subscription with privileges to deploy Azure Container Apps.
+  * **Resource Provider Registration:** The target subscription must have `Microsoft.App` and `Microsoft.OperationalInsights` registered. Run the following CLI commands prior to deployment:
+    ```bash
+    az provider register --namespace Microsoft.App
+    az provider register --namespace Microsoft.OperationalInsights
+    ```
 * **Local Tools:** Installed and configured binaries for `az CLI`, `terraform` (>= 1.5.0), `docker`, and `git`.
 * **GitHub Account:** A GitHub user/org (`ghcr_username`) with a generated Personal Access Token (PAT) having `write:packages` and `read:packages` scopes.
 * **Palo Alto Networks Portal:** Active administrative access to Strata Cloud Manager (SCM) and Customer Support Portal (CSP).
-
 ---
 
 ## Step 1: Licensing and Activation (CSP & SCM Setup)
