@@ -1,13 +1,17 @@
 #!/bin/bash
 set -e
 
+# Validación de variables de entorno
 if [ -z "$MODEL_SECURITY_CLIENT_ID" ] || [ -z "$MODEL_SECURITY_CLIENT_SECRET" ] || [ -z "$TSG_ID" ]; then
-  echo "[ERROR] Faltan variables de entorno para autenticación PANW." >&2
+  echo "[ERROR] Faltan variables requeridas para autenticar con Palo Alto SASE." >&2
+  echo "[DEBUG] CLIENT_ID presente: $([ -n "$MODEL_SECURITY_CLIENT_ID" ] && echo "SI" || echo "NO")" >&2
+  echo "[DEBUG] CLIENT_SECRET presente: $([ -n "$MODEL_SECURITY_CLIENT_SECRET" ] && echo "SI" || echo "NO")" >&2
+  echo "[DEBUG] TSG_ID presente: $([ -n "$TSG_ID" ] && echo "SI" || echo "NO")" >&2
   exit 1
 fi
 
-# Peticion de token a Palo Alto SASE
-RESPONSE=$(curl -s -S -X POST "https://auth.sase.paloaltonetworks.com/oauth2/token" \
+# Petición OAuth2 con flag -L para seguir redirecciones
+RESPONSE=$(curl -s -S -L -X POST "https://auth.sase.paloaltonetworks.com/oauth2/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=client_credentials" \
   -d "client_id=${MODEL_SECURITY_CLIENT_ID}" \
@@ -17,7 +21,7 @@ RESPONSE=$(curl -s -S -X POST "https://auth.sase.paloaltonetworks.com/oauth2/tok
 TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
 
 if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-  echo "[ERROR] Respuesta de autenticación invalida: $RESPONSE" >&2
+  echo "[ERROR] Fallo en la respuesta de autenticación PANW: $RESPONSE" >&2
   exit 1
 fi
 
