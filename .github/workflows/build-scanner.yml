@@ -33,7 +33,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fetch PANW PyPI Token on Host Runner
+      - name: Authenticate with Palo Alto SCM & Fetch PyPI URL
         id: get_pypi
         run: |
           sed -i 's/\r$//' ./02-Prisma-AIRS/02-AI\ Supply\ Chain\ Security/app/get_pypi_url.sh

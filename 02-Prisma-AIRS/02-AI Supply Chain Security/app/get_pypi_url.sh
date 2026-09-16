@@ -1,28 +1,46 @@
 #!/bin/bash
-set -e
+#
+# Model Security Private PyPI Authentication Script
+# Authenticates with SCM and retrieves PyPI repository URL
+#
 
-# Validacion explicita de variables de entorno
-if [ -z "$MODEL_SECURITY_CLIENT_ID" ] || [ -z "$MODEL_SECURITY_CLIENT_SECRET" ] || [ -z "$TSG_ID" ]; then
-  echo "[ERROR] Faltan variables de entorno requeridas para la autenticacion con SASE." >&2
-  echo "[DEBUG] CLIENT_ID presente: $([ -n "$MODEL_SECURITY_CLIENT_ID" ] && echo "SI" || echo "NO")" >&2
-  echo "[DEBUG] CLIENT_SECRET presente: $([ -n "$MODEL_SECURITY_CLIENT_SECRET" ] && echo "SI" || echo "NO")" >&2
-  echo "[DEBUG] TSG_ID presente: $([ -n "$TSG_ID" ] && echo "SI" || echo "NO")" >&2
-  exit 1
+set -euo pipefail
+
+# Check required environment variables
+: "${MODEL_SECURITY_CLIENT_ID:?Error: MODEL_SECURITY_CLIENT_ID not set}"
+: "${MODEL_SECURITY_CLIENT_SECRET:?Error: MODEL_SECURITY_CLIENT_SECRET not set}"
+: "${TSG_ID:?Error: TSG_ID not set}"
+
+# Set default endpoints
+API_ENDPOINT="${MODEL_SECURITY_API_ENDPOINT:-https://api.sase.paloaltonetworks.com/aims}"
+TOKEN_ENDPOINT="${MODEL_SECURITY_TOKEN_ENDPOINT:-https://auth.apps.paloaltonetworks.com/oauth2/access_token}"
+
+# Get SCM access token
+TOKEN_RESPONSE=$(curl -sf -X POST "$TOKEN_ENDPOINT" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -u "$MODEL_SECURITY_CLIENT_ID:$MODEL_SECURITY_CLIENT_SECRET" \
+    -d "grant_type=client_credentials&scope=tsg_id:$TSG_ID") || {
+    echo "Error: Failed to obtain SCM access token" >&2
+    exit 1
+}
+
+SCM_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+if [[ -z "$SCM_TOKEN" || "$SCM_TOKEN" == "null" ]]; then
+    echo "Error: Failed to extract access token from response" >&2
+    exit 1
 fi
 
-# Peticion OAuth2 con reintentos de red y seguimiento de redirecciones
-RESPONSE=$(curl -s -S -L --retry 3 --retry-connrefused -X POST "https://auth.sase.paloaltonetworks.com/oauth2/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=client_credentials" \
-  -d "client_id=${MODEL_SECURITY_CLIENT_ID}" \
-  -d "client_secret=${MODEL_SECURITY_CLIENT_SECRET}" \
-  -d "scope=tsg_id:${TSG_ID}")
+# Get PyPI URL
+PYPI_RESPONSE=$(curl -sf -X GET "$API_ENDPOINT/mgmt/v1/pypi/authenticate" \
+    -H "Authorization: Bearer $SCM_TOKEN") || {
+    echo "Error: Failed to retrieve PyPI URL" >&2
+    exit 1
+}
 
-TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
-
-if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-  echo "[ERROR] Respuesta de token invalida desde Palo Alto SASE: $RESPONSE" >&2
-  exit 1
+PYPI_URL=$(echo "$PYPI_RESPONSE" | jq -r '.url')
+if [[ -z "$PYPI_URL" || "$PYPI_URL" == "null" ]]; then
+    echo "Error: Failed to extract PyPI URL from response" >&2
+    exit 1
 fi
 
-echo "https://__token__:${TOKEN}@pypi.panw.ai/simple"
+echo "$PYPI_URL"

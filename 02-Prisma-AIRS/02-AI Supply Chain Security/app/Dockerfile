@@ -4,7 +4,6 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /app
 
-# URL autenticada generada por el runner de GitHub
 ARG PYPI_URL
 
 RUN uv pip install --system --no-cache fastapi uvicorn \
