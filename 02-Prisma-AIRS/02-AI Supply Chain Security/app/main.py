@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, status
 from pydantic import BaseModel, HttpUrl
 
+# Importación directa según la docu oficial y tu laboratorio
 from model_security_client.api import ModelSecurityAPIClient
 
 app = FastAPI(title="Prisma AIRS Model Security Scanner")
@@ -19,18 +20,15 @@ def execute_prisma_airs_scan(model_uri: str, security_group_uuid: str):
     try:
         logger.info(f"[+] Iniciando Prisma AIRS scan para URI: {model_uri}")
         
+        # El SDK lee automáticamente MODEL_SECURITY_CLIENT_ID, SECRET y TSG_ID del SO
         client = ModelSecurityAPIClient(
-            base_url="https://api.sase.paloaltonetworks.com/aims",
-            client_id=os.getenv("PALO_ALTO_CLIENT_ID"),
-            client_secret=os.getenv("PALO_ALTO_CLIENT_SECRET"),
-            tsg_id=os.getenv("PALO_ALTO_TSG_ID")
+            base_url="https://api.sase.paloaltonetworks.com/aims"
         )
 
         result = client.scan(
             security_group_uuid=security_group_uuid,
             model_uri=model_uri
         )
-
         logger.info(f"[+] Scan completado. Resultado: {getattr(result, 'eval_outcome', 'SUCCESS')}")
 
     except Exception as e:
