@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield } from 'lucide-react';
 
 const i18n = {
@@ -11,12 +11,11 @@ const i18n = {
     modelUrlLabel: 'URL del Artefacto (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Auditar Artefacto',
-    scanning: 'Iniciando análisis en Azure ACA...',
-    polling: 'SCM analizando... consultando estado...',
+    scanning: 'Evaluando políticas en Strata Cloud Manager...',
     resultsTitle: 'Veredicto de Seguridad SCM',
     statusPassed: 'APROBADO PARA DESPLIEGUE',
     statusFailed: 'RIESGO DETECTADO - BLOQUEADO',
-    statusQueued: 'ESCANEO EN COLA / EN PROCESO',
+    statusQueued: 'SOLICITUD EN COLAS / PROCESADA EN SCM',
     rawResponse: 'Telemetría de Inspección (Raw Payload)',
   },
   en: {
@@ -26,12 +25,11 @@ const i18n = {
     modelUrlLabel: 'Artifact URL (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Audit Artifact',
-    scanning: 'Initiating scan in Azure ACA...',
-    polling: 'SCM analyzing... checking status...',
+    scanning: 'Evaluating policies in Strata Cloud Manager...',
     resultsTitle: 'SCM Security Verdict',
     statusPassed: 'APPROVED FOR DEPLOYMENT',
     statusFailed: 'RISK DETECTED - BLOCKED',
-    statusQueued: 'SCAN QUEUED / IN PROGRESS',
+    statusQueued: 'REQUEST QUEUED / PROCESSED IN SCM',
     rawResponse: 'Inspection Telemetry (Raw Payload)',
   },
 };
@@ -41,63 +39,32 @@ export default function SecurityHubPage() {
   const [modelUrl, setModelUrl] = useState('https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf');
   const [groupId, setGroupId] = useState('2baf2bc5-2ae2-42d6-a548-9af6a2cb4c32');
   const [loading, setLoading] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  
-  // Usamos useRef para poder cancelar el polling si el usuario sale o cancela
-  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const t = i18n[lang];
-
-  const executeScanCall = async (url: string, group: string) => {
-    const res = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model_url: url, group_id: group }),
-    });
-    
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || 'Fallo en la comunicación con el plano de datos.');
-    }
-    return await res.json();
-  };
-
-  const pollStatus = async (url: string, group: string) => {
-    try {
-      const data = await executeScanCall(url, group);
-      setResult(data);
-
-      // Si sigue en cola, esperamos 5 segundos y volvemos a preguntar
-      if (data.status === 'accepted' || data.status === 'queued') {
-        setIsPolling(true);
-        pollingTimeoutRef.current = setTimeout(() => pollStatus(url, group), 5000);
-      } else {
-        // Escaneo terminado (PASSED, FAILED, ALLOW, BLOCK, etc)
-        setIsPolling(false);
-        setLoading(false);
-      }
-    } catch (err: any) {
-      setError(err.message);
-      setIsPolling(false);
-      setLoading(false);
-    }
-  };
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setIsPolling(false);
     setResult(null);
     setError(null);
-    
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-    }
 
-    // Iniciamos la primera llamada
-    pollStatus(modelUrl, groupId);
+    try {
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_url: modelUrl, group_id: groupId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fallo en la comunicación con el plano de datos.');
+      setResult(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,7 +108,7 @@ export default function SecurityHubPage() {
                 value={modelUrl}
                 onChange={(e) => setModelUrl(e.target.value)}
                 disabled={loading}
-                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 font-mono transition-all shadow-inner disabled:opacity-50"
+                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 font-mono transition-all shadow-inner disabled:opacity-50"
                 required
               />
             </div>
@@ -153,7 +120,7 @@ export default function SecurityHubPage() {
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
                 disabled={loading}
-                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-mono transition-all shadow-inner disabled:opacity-50"
+                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 font-mono transition-all shadow-inner disabled:opacity-50"
                 required
               />
             </div>
@@ -166,7 +133,7 @@ export default function SecurityHubPage() {
               {loading ? (
                 <span className="flex items-center gap-2">
                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                   {isPolling ? t.polling : t.scanning}
+                   {t.scanning}
                 </span>
               ) : (
                 <>
@@ -191,18 +158,17 @@ export default function SecurityHubPage() {
           <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50">
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
               <h2 className="text-lg font-bold text-white tracking-tight">{t.resultsTitle}</h2>
-              {result.status === 'accepted' || result.status === 'queued' ? (
-                 <span className="text-xs font-bold bg-amber-950/60 text-amber-400 border border-amber-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                   <div className="w-3 h-3 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin"></div>
-                   {t.statusQueued}
-                 </span>
-              ) : result.status === 'PASSED' || result.verdict === 'ALLOW' ? (
+              {result.status === 'PASSED' || result.verdict === 'ALLOW' ? (
                 <span className="text-xs font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4" /> {t.statusPassed}
                 </span>
-              ) : (
+              ) : result.status === 'FAILED' || result.verdict === 'BLOCK' ? (
                 <span className="text-xs font-bold bg-rose-950/60 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
                   <ShieldAlert className="w-4 h-4" /> {t.statusFailed}
+                </span>
+              ) : (
+                <span className="text-xs font-bold bg-cyan-950/60 text-cyan-400 border border-cyan-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                  ✓ {t.statusQueued}
                 </span>
               )}
             </div>
