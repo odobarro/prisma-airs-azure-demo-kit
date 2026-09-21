@@ -25,7 +25,6 @@ async def scan_endpoint(
     x_api_key: Optional[str] = Header(None)
 ):
     if INTERNAL_API_TOKEN and x_api_key != INTERNAL_API_TOKEN:
-        logger.warning("[-] Unauthorized access attempt: Invalid token.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: Invalid x-api-key header."
@@ -38,7 +37,7 @@ async def scan_endpoint(
             base_url="https://api.sase.paloaltonetworks.com/aims"
         )
 
-        # 1. Ejecutar escaneo principal en AIMS
+        # 1. Ejecución del escaneo en el motor de SCM
         result = client.scan(
             security_group_uuid=payload.group_id,
             model_uri=str(payload.model_url)
@@ -55,27 +54,32 @@ async def scan_endpoint(
         violations = []
         rules_failed = data.get("eval_summary", {}).get("rules_failed", 0)
 
-        # 2. Consultar Violaciones Detalladas en AIMS Data API
+        # 2. Smart Polling con Observabilidad
         if scan_uuid and rules_failed > 0:
-            max_retries = 3
+            max_retries = 4 # Incrementado para dar margen a SCM
+            diagnostic_error = None
             
             for attempt in range(max_retries):
                 try:
-                    time.sleep(2.0)
-                    logger.info(f"[*] Fetching violations for {scan_uuid} via Data API (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(4.0) # 4 segundos de backoff por intento
+                    logger.info(f"[*] Fetching violations for {scan_uuid} (Attempt {attempt + 1}/{max_retries})")
                     
                     headers = {"Content-Type": "application/json"}
-                    # Extraer el Bearer token del SDK oficial de Palo Alto
+                    
+                    # Extracción agresiva del token de autorización
                     if hasattr(client, "session") and hasattr(client.session, "headers"):
                         sdk_headers = dict(client.session.headers)
                         if "Authorization" in sdk_headers:
                             headers["Authorization"] = sdk_headers["Authorization"]
-                    elif hasattr(client, "auth_header"):
+                    
+                    if "Authorization" not in headers and hasattr(client, "auth_header"):
                         headers["Authorization"] = client.auth_header
-                    
-                    # Endpoint oficial extraído de la consola SCM
+                        
+                    if "Authorization" not in headers:
+                        diagnostic_error = "MISSING_BEARER_TOKEN_IN_SDK"
+                        break
+
                     violations_url = f"https://api.sase.paloaltonetworks.com/aims/data/v1/scans/{scan_uuid}/rule-violations?skip=0&limit=100"
-                    
                     req = urllib.request.Request(violations_url, headers=headers)
                     
                     viol_res = {}
@@ -92,16 +96,33 @@ async def scan_endpoint(
 
                     if len(current_violations) > 0:
                         violations = current_violations
+                        diagnostic_error = None
                         break
+                    else:
+                        diagnostic_error = "EMPTY_ARRAY_FROM_SCM_DATABASE"
 
                 except urllib.error.HTTPError as http_err:
-                    logger.warning(f"[!] HTTP Error {http_err.code} fetching violations: {http_err.read().decode('utf-8')}")
+                    error_body = http_err.read().decode('utf-8')
+                    diagnostic_error = f"HTTP {http_err.code}: {error_body}"
+                    logger.error(f"[!] {diagnostic_error}")
+                    # No hacemos break en 500s por si es transitorio, pero sí en 401/403
+                    if http_err.code in (401, 403):
+                        break
                 except Exception as viol_err:
-                    logger.warning(f"[!] Attempt {attempt + 1} failed fetching violations: {str(viol_err)}")
+                    diagnostic_error = f"INTERNAL_ERROR: {str(viol_err)}"
+                    logger.error(f"[!] {diagnostic_error}")
 
-        # 3. Enriquecer el payload JSON
+            # Si el bucle termina sin violaciones pero SCM reportó fallos, inyectamos el diagnóstico
+            if len(violations) == 0 and diagnostic_error:
+                violations.append({
+                    "rule_name": "Diagnostic System Warning",
+                    "threat": "INTEGRATION_ERROR",
+                    "description": f"Failed to retrieve detailed violations from SCM Data API. Reason: {diagnostic_error}",
+                    "file": "Azure Container Apps Backend"
+                })
+
         data["violations"] = violations
-        logger.info(f"[+] Scan completed. Outcome: {data.get('eval_outcome')}. Fetched violations: {len(violations)}")
+        logger.info(f"[+] Scan completed. Fetched violations: {len(violations)}")
         
         return data
 
