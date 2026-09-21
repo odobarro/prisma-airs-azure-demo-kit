@@ -76,10 +76,10 @@ async def scan_endpoint(
                         else:
                             viol_res = {}
 
-            if isinstance(viol_res, dict):
-                violations = viol_res.get("violations", [])
-            elif isinstance(viol_res, list):
-                violations = viol_res
+                if isinstance(viol_res, dict):
+                    violations = viol_res.get("violations", [])
+                elif isinstance(viol_res, list):
+                    violations = viol_res
 
             except Exception as viol_err:
                 logger.warning(f"[!] Could not fetch detailed violations for scan {scan_uuid}: {str(viol_err)}")
