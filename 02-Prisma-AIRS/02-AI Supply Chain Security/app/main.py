@@ -37,7 +37,6 @@ async def scan_endpoint(
             base_url="https://api.sase.paloaltonetworks.com/aims"
         )
 
-        # 1. Ejecución del escaneo en el motor de SCM
         result = client.scan(
             security_group_uuid=payload.group_id,
             model_uri=str(payload.model_url)
@@ -51,84 +50,63 @@ async def scan_endpoint(
             data = getattr(result, "__dict__", {})
 
         scan_uuid = data.get("uuid")
-        violations = []
         rules_failed = data.get("eval_summary", {}).get("rules_failed", 0)
+        
+        violations = []
+        diagnostic_info = "OK"
 
-        # 2. Smart Polling con Observabilidad
         if scan_uuid and rules_failed > 0:
-            max_retries = 4 # Incrementado para dar margen a SCM
-            diagnostic_error = None
-            
-            for attempt in range(max_retries):
+            for attempt in range(3):
+                time.sleep(2.5)
                 try:
-                    time.sleep(4.0) # 4 segundos de backoff por intento
-                    logger.info(f"[*] Fetching violations for {scan_uuid} (Attempt {attempt + 1}/{max_retries})")
+                    if hasattr(client, "get_scan_violations"):
+                        violations = client.get_scan_violations(scan_uuid)
+                        if violations: break
                     
-                    headers = {"Content-Type": "application/json"}
-                    
-                    # Extracción agresiva del token de autorización
+                    auth_token = None
                     if hasattr(client, "session") and hasattr(client.session, "headers"):
-                        sdk_headers = dict(client.session.headers)
-                        if "Authorization" in sdk_headers:
-                            headers["Authorization"] = sdk_headers["Authorization"]
-                    
-                    if "Authorization" not in headers and hasattr(client, "auth_header"):
-                        headers["Authorization"] = client.auth_header
+                        auth_token = client.session.headers.get("Authorization")
+                    elif hasattr(client, "auth_header"):
+                        auth_token = client.auth_header
+                    elif hasattr(client, "get_auth_header"):
+                        auth_token = client.get_auth_header()
                         
-                    if "Authorization" not in headers:
-                        diagnostic_error = "MISSING_BEARER_TOKEN_IN_SDK"
-                        break
+                    if not auth_token:
+                        diagnostic_info = "AUTH_TOKEN_NOT_EXPOSED_BY_SDK"
+                        continue
 
-                    violations_url = f"https://api.sase.paloaltonetworks.com/aims/data/v1/scans/{scan_uuid}/rule-violations?skip=0&limit=100"
-                    req = urllib.request.Request(violations_url, headers=headers)
+                    url = f"https://api.sase.paloaltonetworks.com/aims/data/v1/scans/{scan_uuid}/rule-violations?skip=0&limit=100"
+                    req = urllib.request.Request(url, headers={"Authorization": auth_token, "Content-Type": "application/json"})
                     
-                    viol_res = {}
                     with urllib.request.urlopen(req) as resp:
                         if resp.status == 200:
                             viol_res = json.loads(resp.read().decode("utf-8"))
+                            
+                            if isinstance(viol_res, dict) and "violations" in viol_res:
+                                violations = viol_res["violations"]
+                            elif isinstance(viol_res, list):
+                                violations = viol_res
+                                
+                            if len(violations) > 0:
+                                break
+                            else:
+                                diagnostic_info = "SCM_RETURNED_EMPTY_ARRAY"
 
-                    if isinstance(viol_res, dict):
-                        current_violations = viol_res.get("violations", [])
-                    elif isinstance(viol_res, list):
-                        current_violations = viol_res
-                    else:
-                        current_violations = []
+                except Exception as e:
+                    diagnostic_info = f"POLLING_ERROR: {str(e)}"
+                    logger.error(f"[!] {diagnostic_info}")
 
-                    if len(current_violations) > 0:
-                        violations = current_violations
-                        diagnostic_error = None
-                        break
-                    else:
-                        diagnostic_error = "EMPTY_ARRAY_FROM_SCM_DATABASE"
-
-                except urllib.error.HTTPError as http_err:
-                    error_body = http_err.read().decode('utf-8')
-                    diagnostic_error = f"HTTP {http_err.code}: {error_body}"
-                    logger.error(f"[!] {diagnostic_error}")
-                    # No hacemos break en 500s por si es transitorio, pero sí en 401/403
-                    if http_err.code in (401, 403):
-                        break
-                except Exception as viol_err:
-                    diagnostic_error = f"INTERNAL_ERROR: {str(viol_err)}"
-                    logger.error(f"[!] {diagnostic_error}")
-
-            # Si el bucle termina sin violaciones pero SCM reportó fallos, inyectamos el diagnóstico
-            if len(violations) == 0 and diagnostic_error:
-                violations.append({
-                    "rule_name": "Diagnostic System Warning",
-                    "threat": "INTEGRATION_ERROR",
-                    "description": f"Failed to retrieve detailed violations from SCM Data API. Reason: {diagnostic_error}",
-                    "file": "Azure Container Apps Backend"
-                })
+        if len(violations) == 0:
+            violations.append({
+                "rule_name": "Azure Revision Check",
+                "threat": "DIAGNOSTIC",
+                "description": f"New synchronous code IS running. Rules failed: {rules_failed}. Status: {diagnostic_info}",
+                "file": "Azure Container Apps"
+            })
 
         data["violations"] = violations
-        logger.info(f"[+] Scan completed. Fetched violations: {len(violations)}")
-        
         return data
 
     except Exception as e:
-        logger.error(f"[!] Error executing Prisma AIRS evaluation: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Prisma AIRS evaluation failed: {str(e)}"
-        )
+        logger.error(f"[!] Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
