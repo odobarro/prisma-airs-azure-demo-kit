@@ -38,7 +38,7 @@ async def scan_endpoint(
             base_url="https://api.sase.paloaltonetworks.com/aims"
         )
 
-        # 1. Execute primary model scan in AIMS
+        # 1. Ejecutar escaneo principal en AIMS
         result = client.scan(
             security_group_uuid=payload.group_id,
             model_uri=str(payload.model_url)
@@ -55,39 +55,34 @@ async def scan_endpoint(
         violations = []
         rules_failed = data.get("eval_summary", {}).get("rules_failed", 0)
 
-        # 2. Smart Polling for Eventual Consistency
+        # 2. Consultar Violaciones Detalladas en AIMS Data API
         if scan_uuid and rules_failed > 0:
             max_retries = 3
             
             for attempt in range(max_retries):
                 try:
-                    # Give SCM backend time to propagate the violations to the database
-                    time.sleep(1.5)
-                    logger.info(f"[*] Fetching violations for {scan_uuid} (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(2.0)
+                    logger.info(f"[*] Fetching violations for {scan_uuid} via Data API (Attempt {attempt + 1}/{max_retries})")
+                    
+                    headers = {"Content-Type": "application/json"}
+                    # Extraer el Bearer token del SDK oficial de Palo Alto
+                    if hasattr(client, "session") and hasattr(client.session, "headers"):
+                        sdk_headers = dict(client.session.headers)
+                        if "Authorization" in sdk_headers:
+                            headers["Authorization"] = sdk_headers["Authorization"]
+                    elif hasattr(client, "auth_header"):
+                        headers["Authorization"] = client.auth_header
+                    
+                    # Endpoint oficial extraído de la consola SCM
+                    violations_url = f"https://api.sase.paloaltonetworks.com/aims/data/v1/scans/{scan_uuid}/rule-violations?skip=0&limit=100"
+                    
+                    req = urllib.request.Request(violations_url, headers=headers)
                     
                     viol_res = {}
-                    if hasattr(client, "get_violations"):
-                        viol_res = client.get_violations(scan_uuid)
-                    elif hasattr(client, "get_scan_violations"):
-                        viol_res = client.get_scan_violations(scan_uuid)
-                    else:
-                        # Fallback REST call with dynamic auth header extraction from SDK
-                        headers = {}
-                        if hasattr(client, "session") and hasattr(client.session, "headers"):
-                            headers = dict(client.session.headers)
-                        elif hasattr(client, "_session") and hasattr(client._session, "headers"):
-                            headers = dict(client._session.headers)
-                        elif hasattr(client, "auth_header"):
-                            headers["Authorization"] = client.auth_header
+                    with urllib.request.urlopen(req) as resp:
+                        if resp.status == 200:
+                            viol_res = json.loads(resp.read().decode("utf-8"))
 
-                        violations_url = f"https://api.sase.paloaltonetworks.com/aims/v1/scans/{scan_uuid}/violations"
-                        req = urllib.request.Request(violations_url, headers=headers)
-                        
-                        with urllib.request.urlopen(req) as resp:
-                            if resp.status == 200:
-                                viol_res = json.loads(resp.read().decode("utf-8"))
-
-                    # Parse response structure
                     if isinstance(viol_res, dict):
                         current_violations = viol_res.get("violations", [])
                     elif isinstance(viol_res, list):
@@ -95,15 +90,16 @@ async def scan_endpoint(
                     else:
                         current_violations = []
 
-                    # If SCM has propagated the data, break the polling loop
                     if len(current_violations) > 0:
                         violations = current_violations
                         break
 
+                except urllib.error.HTTPError as http_err:
+                    logger.warning(f"[!] HTTP Error {http_err.code} fetching violations: {http_err.read().decode('utf-8')}")
                 except Exception as viol_err:
                     logger.warning(f"[!] Attempt {attempt + 1} failed fetching violations: {str(viol_err)}")
 
-        # 3. Enrich payload
+        # 3. Enriquecer el payload JSON
         data["violations"] = violations
         logger.info(f"[+] Scan completed. Outcome: {data.get('eval_outcome')}. Fetched violations: {len(violations)}")
         
