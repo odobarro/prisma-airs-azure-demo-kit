@@ -1,9 +1,11 @@
 import os
 import logging
+import json
+import urllib.request
+import urllib.error
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, HttpUrl
-import requests
 
 from model_security_client.api import ModelSecurityAPIClient
 
@@ -60,18 +62,24 @@ async def scan_endpoint(
                 elif hasattr(client, "get_scan_violations"):
                     viol_res = client.get_scan_violations(scan_uuid)
                 else:
-                    # Fallback REST call using client session/headers
+                    # Fallback REST call using standard library urllib (zero external dependencies)
                     violations_url = f"https://api.sase.paloaltonetworks.com/aims/v1/scans/{scan_uuid}/violations"
-                    res = client.session.get(violations_url) if hasattr(client, "session") else requests.get(
-                        violations_url, 
-                        headers={"Authorization": getattr(client, "auth_header", "")}
-                    )
-                    viol_res = res.json()
+                    req = urllib.request.Request(violations_url)
+                    
+                    auth_hdr = getattr(client, "auth_header", None)
+                    if auth_hdr:
+                        req.add_header("Authorization", auth_hdr)
+                        
+                    with urllib.request.urlopen(req) as resp:
+                        if resp.status == 200:
+                            viol_res = json.loads(resp.read().decode("utf-8"))
+                        else:
+                            viol_res = {}
 
-                if isinstance(viol_res, dict):
-                    violations = viol_res.get("violations", [])
-                elif isinstance(viol_res, list):
-                    violations = viol_res
+            if isinstance(viol_res, dict):
+                violations = viol_res.get("violations", [])
+            elif isinstance(viol_res, list):
+                violations = viol_res
 
             except Exception as viol_err:
                 logger.warning(f"[!] Could not fetch detailed violations for scan {scan_uuid}: {str(viol_err)}")
