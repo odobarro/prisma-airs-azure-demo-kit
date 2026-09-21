@@ -1,5 +1,8 @@
 import os
 import logging
+import json
+import urllib.request
+import urllib.error
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, HttpUrl
@@ -30,32 +33,61 @@ async def scan_endpoint(
     try:
         logger.info(f"[+] Starting synchronous Prisma AIRS scan for URI: {payload.model_url}")
         
-        # Invocación directa y limpia del SDK oficial de Palo Alto Networks
         client = ModelSecurityAPIClient(
             base_url="https://api.sase.paloaltonetworks.com/aims"
         )
 
+        # 1. Execute primary model scan in AIMS
         result = client.scan(
             security_group_uuid=payload.group_id,
             model_uri=str(payload.model_url)
         )
         
-        logger.info(f"[+] Scan completed. Outcome: {getattr(result, 'eval_outcome', 'SUCCESS')}")
-
-        # Conversión segura del objeto de respuesta a JSON
+        # Convert SDK result object to dictionary
         if hasattr(result, "model_dump"):
             data = result.model_dump()
         elif hasattr(result, "dict"):
             data = result.dict()
-        elif isinstance(result, dict):
-            data = result
         else:
-            data = getattr(result, "__dict__", {"status": "success", "raw_result": str(result)})
+            data = getattr(result, "__dict__", {})
 
-        # Garantizamos que la clave violations exista para que el frontend no falle
-        if "violations" not in data:
-            data["violations"] = []
+        scan_uuid = data.get("uuid")
+        violations = []
 
+        # 2. Query detailed violations from SCM if scan UUID exists
+        if scan_uuid:
+            try:
+                if hasattr(client, "get_violations"):
+                    viol_res = client.get_violations(scan_uuid)
+                elif hasattr(client, "get_scan_violations"):
+                    viol_res = client.get_scan_violations(scan_uuid)
+                else:
+                    # Fallback REST call using standard library urllib (zero external dependencies)
+                    violations_url = f"https://api.sase.paloaltonetworks.com/aims/v1/scans/{scan_uuid}/violations"
+                    req = urllib.request.Request(violations_url)
+                    
+                    auth_hdr = getattr(client, "auth_header", None)
+                    if auth_hdr:
+                        req.add_header("Authorization", auth_hdr)
+                        
+                    with urllib.request.urlopen(req) as resp:
+                        if resp.status == 200:
+                            viol_res = json.loads(resp.read().decode("utf-8"))
+                        else:
+                            viol_res = {}
+
+                if isinstance(viol_res, dict):
+                    violations = viol_res.get("violations", [])
+                elif isinstance(viol_res, list):
+                    violations = viol_res
+
+            except Exception as viol_err:
+                logger.warning(f"[!] Could not fetch detailed violations for scan {scan_uuid}: {str(viol_err)}")
+
+        # 3. Enrich payload with SCM violations array
+        data["violations"] = violations
+        logger.info(f"[+] Scan completed. Outcome: {data.get('eval_outcome')}. Total violations: {len(violations)}")
+        
         return data
 
     except Exception as e:
