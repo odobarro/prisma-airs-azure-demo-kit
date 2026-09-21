@@ -1,6 +1,6 @@
 # 02-Service-Apps: SecOps AI Supply Chain Security Hub
 
-This directory contains an isolated, dedicated SecOps web portal (**Model & Skill Validation Hub**) designed for security operations teams to perform pre-deployment analysis on AI models, datasets, and agent skills like **Hugging Face**, **GitLab**, **Azure**, ... repositories.
+This directory contains an isolated, dedicated SecOps web portal (**Model & Skill Validation Hub**) designed for security operations teams to perform pre-deployment analysis on AI models, datasets, and agent skills like **Hugging Face**, **GitLab**, **Azure**, **AWS**, ... repositories.
 
 As an internal security management interface, this application safeguards the AI development lifecycle against critical supply chain vectors: **Malicious Pickle/PyTorch Tensor Deserialization**, **Software Vulnerabilities (CVEs)**, **Non-compliant Open-Source Licensing (e.g., CC-BY-NC)**, and **Unvetted Agent Capabilities**. It serves as a primary demonstration platform for partners to showcase **Palo Alto Networks Prisma AIRS (AI Supply Chain Security)** integration with **Strata Cloud Manager (SCM)** policies.
 
