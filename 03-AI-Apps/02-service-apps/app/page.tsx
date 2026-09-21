@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield, AlertTriangle } from 'lucide-react';
 
 const i18n = {
   es: {
@@ -11,12 +11,16 @@ const i18n = {
     modelUrlLabel: 'URL del Artefacto (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Auditar Artefacto',
-    scanning: 'Evaluando políticas en Strata Cloud Manager...',
-    resultsTitle: 'Veredicto de Seguridad SCM',
+    scanning: 'Motor Idira analizando artefacto en la nube...',
+    resultsTitle: 'Dictamen de Seguridad (Strata Cloud Manager)',
     statusPassed: 'APROBADO PARA DESPLIEGUE',
-    statusFailed: 'RIESGO DETECTADO - BLOQUEADO',
-    statusQueued: 'SOLICITUD EN COLAS / PROCESADA EN SCM',
+    statusFailed: 'RIESGO CRÍTICO - DESPLIEGUE BLOQUEADO',
     rawResponse: 'Telemetría de Inspección (Raw Payload)',
+    sumTotal: 'Reglas Evaluadas',
+    sumPassed: 'Reglas Aprobadas',
+    sumFailed: 'Violaciones',
+    ruleTh: 'Regla de Seguridad SCM',
+    detailTh: 'Detalle Técnico / Archivo',
   },
   en: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
@@ -25,12 +29,16 @@ const i18n = {
     modelUrlLabel: 'Artifact URL (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Audit Artifact',
-    scanning: 'Evaluating policies in Strata Cloud Manager...',
-    resultsTitle: 'SCM Security Verdict',
+    scanning: 'Idira Engine analyzing cloud artifact...',
+    resultsTitle: 'Security Verdict (Strata Cloud Manager)',
     statusPassed: 'APPROVED FOR DEPLOYMENT',
-    statusFailed: 'RISK DETECTED - BLOCKED',
-    statusQueued: 'REQUEST QUEUED / PROCESSED IN SCM',
+    statusFailed: 'CRITICAL RISK - DEPLOYMENT BLOCKED',
     rawResponse: 'Inspection Telemetry (Raw Payload)',
+    sumTotal: 'Rules Evaluated',
+    sumPassed: 'Rules Passed',
+    sumFailed: 'Violations',
+    ruleTh: 'SCM Security Rule',
+    detailTh: 'Technical Detail / File',
   },
 };
 
@@ -58,7 +66,7 @@ export default function SecurityHubPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Fallo en la comunicación con el plano de datos.');
+      if (!res.ok) throw new Error(data.error || 'Fallo en la comunicación con Prisma AIRS.');
       setResult(data);
     } catch (err: any) {
       setError(err.message);
@@ -108,7 +116,7 @@ export default function SecurityHubPage() {
                 value={modelUrl}
                 onChange={(e) => setModelUrl(e.target.value)}
                 disabled={loading}
-                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 font-mono transition-all shadow-inner disabled:opacity-50"
+                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 font-mono transition-all shadow-inner disabled:opacity-50"
                 required
               />
             </div>
@@ -120,7 +128,7 @@ export default function SecurityHubPage() {
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
                 disabled={loading}
-                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 font-mono transition-all shadow-inner disabled:opacity-50"
+                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-mono transition-all shadow-inner disabled:opacity-50"
                 required
               />
             </div>
@@ -158,20 +166,65 @@ export default function SecurityHubPage() {
           <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50">
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
               <h2 className="text-lg font-bold text-white tracking-tight">{t.resultsTitle}</h2>
-              {result.status === 'PASSED' || result.verdict === 'ALLOW' ? (
+              {result.is_secure ? (
                 <span className="text-xs font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4" /> {t.statusPassed}
                 </span>
-              ) : result.status === 'FAILED' || result.verdict === 'BLOCK' ? (
-                <span className="text-xs font-bold bg-rose-950/60 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4" /> {t.statusFailed}
-                </span>
               ) : (
-                <span className="text-xs font-bold bg-cyan-950/60 text-cyan-400 border border-cyan-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                  ✓ {t.statusQueued}
+                <span className="text-xs font-bold bg-rose-950/60 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_0_15px_rgba(225,29,72,0.3)]">
+                  <ShieldAlert className="w-4 h-4 animate-pulse" /> {t.statusFailed}
                 </span>
               )}
             </div>
+
+            {/* Panel Forense basado en el formato exacto de tu script Python */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+               <div className="bg-[#0a0f18] border border-slate-800 p-4 rounded-xl text-center">
+                  <span className="block text-xs text-slate-500 uppercase font-semibold tracking-wider mb-1">{t.sumTotal}</span>
+                  <span className="text-2xl font-bold text-slate-300">{result.summary?.total || 0}</span>
+               </div>
+               <div className="bg-emerald-950/20 border border-emerald-900/30 p-4 rounded-xl text-center">
+                  <span className="block text-xs text-emerald-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumPassed}</span>
+                  <span className="text-2xl font-bold text-emerald-400">{result.summary?.passed || 0}</span>
+               </div>
+               <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl text-center">
+                  <span className="block text-xs text-rose-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumFailed}</span>
+                  <span className="text-2xl font-bold text-rose-400">{result.summary?.failed || 0}</span>
+               </div>
+            </div>
+
+            {!result.is_secure && result.violations && result.violations.length > 0 && (
+               <div className="mb-6 overflow-hidden rounded-xl border border-rose-900/50 shadow-inner">
+                  <table className="w-full text-left border-collapse text-[13px]">
+                     <thead>
+                        <tr className="bg-rose-950/40 text-rose-400 border-b border-rose-900/50">
+                           <th className="py-3 px-4 font-semibold">{t.ruleTh}</th>
+                           <th className="py-3 px-4 font-semibold">{t.detailTh}</th>
+                        </tr>
+                     </thead>
+                     <tbody className="bg-[#0a0f18]">
+                        {result.violations.map((v: any, i: number) => (
+                           <tr key={i} className="border-b border-slate-800/80 last:border-0">
+                              <td className="py-3 px-4 text-slate-300 font-semibold align-top w-1/3">
+                                 <div className="flex items-center gap-2">
+                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+                                    {v.rule_name || 'Policy Violation'}
+                                 </div>
+                              </td>
+                              <td className="py-3 px-4 text-slate-400 align-top">
+                                 <span className="block text-rose-200/90">{v.description || v.threat_description}</span>
+                                 {v.file && (
+                                    <span className="inline-block mt-1.5 text-[11px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-cyan-400/80">
+                                       File: {v.file}
+                                    </span>
+                                 )}
+                              </td>
+                           </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            )}
 
             <div className="bg-[#0a0f18] p-5 rounded-xl border border-slate-800/50 text-[11px] leading-relaxed overflow-x-auto shadow-inner">
               <span className="text-slate-500 block mb-3 font-semibold tracking-wider">/* {t.rawResponse} */</span>
