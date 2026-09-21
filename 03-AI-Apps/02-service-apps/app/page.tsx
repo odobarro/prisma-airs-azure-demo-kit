@@ -11,16 +11,17 @@ const i18n = {
     modelUrlLabel: 'URL del Artefacto (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Auditar Artefacto',
-    scanning: 'Motor Idira analizando artefacto en la nube...',
-    resultsTitle: 'Dictamen de Seguridad (Strata Cloud Manager)',
+    scanning: 'Conectando con Prisma AIRS en Azure...',
+    resultsTitle: 'Dictamen de Seguridad (SCM)',
     statusPassed: 'APROBADO PARA DESPLIEGUE',
-    statusFailed: 'RIESGO CRÍTICO - DESPLIEGUE BLOQUEADO',
+    statusFailed: 'RIESGO DETECTADO - BLOQUEADO',
+    statusQueued: 'ESCANEO EN COLA / PROCESANDO EN SCM',
     rawResponse: 'Telemetría de Inspección (Raw Payload)',
     sumTotal: 'Reglas Evaluadas',
     sumPassed: 'Reglas Aprobadas',
-    sumFailed: 'Violaciones',
-    ruleTh: 'Regla de Seguridad SCM',
-    detailTh: 'Detalle Técnico / Archivo',
+    sumFailed: 'Violaciones SCM',
+    ruleTh: 'Regla Violada (SCM)',
+    detailTh: 'Descripción del Riesgo / Archivo',
   },
   en: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
@@ -29,16 +30,17 @@ const i18n = {
     modelUrlLabel: 'Artifact URL (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Audit Artifact',
-    scanning: 'Idira Engine analyzing cloud artifact...',
-    resultsTitle: 'Security Verdict (Strata Cloud Manager)',
+    scanning: 'Connecting to Prisma AIRS on Azure...',
+    resultsTitle: 'Security Verdict (SCM)',
     statusPassed: 'APPROVED FOR DEPLOYMENT',
-    statusFailed: 'CRITICAL RISK - DEPLOYMENT BLOCKED',
+    statusFailed: 'RISK DETECTED - BLOCKED',
+    statusQueued: 'SCAN QUEUED / PROCESSING IN SCM',
     rawResponse: 'Inspection Telemetry (Raw Payload)',
     sumTotal: 'Rules Evaluated',
     sumPassed: 'Rules Passed',
-    sumFailed: 'Violations',
-    ruleTh: 'SCM Security Rule',
-    detailTh: 'Technical Detail / File',
+    sumFailed: 'SCM Violations',
+    ruleTh: 'Violated SCM Rule',
+    detailTh: 'Risk Description / File',
   },
 };
 
@@ -74,6 +76,14 @@ export default function SecurityHubPage() {
       setLoading(false);
     }
   };
+
+  // Lógica dinámica para identificar el estado real de la respuesta
+  const isQueued = result?.status === 'accepted' || result?.message === 'Scan queued';
+  const hasVeredictData = result?.summary !== undefined || result?.violations !== undefined;
+  
+  // Determinamos si es seguro basándonos en si hay violaciones (si es un payload SCM)
+  const isSecure = hasVeredictData && result?.violations?.length === 0;
+  const isBlocked = hasVeredictData && result?.violations?.length > 0;
 
   return (
     <div className="min-h-screen bg-[#0a0f18] text-slate-200 font-mono selection:bg-cyan-900 selection:text-cyan-100">
@@ -116,7 +126,7 @@ export default function SecurityHubPage() {
                 value={modelUrl}
                 onChange={(e) => setModelUrl(e.target.value)}
                 disabled={loading}
-                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 font-mono transition-all shadow-inner disabled:opacity-50"
+                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 font-mono transition-all shadow-inner disabled:opacity-50"
                 required
               />
             </div>
@@ -128,7 +138,7 @@ export default function SecurityHubPage() {
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
                 disabled={loading}
-                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-mono transition-all shadow-inner disabled:opacity-50"
+                className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 font-mono transition-all shadow-inner disabled:opacity-50"
                 required
               />
             </div>
@@ -136,7 +146,7 @@ export default function SecurityHubPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 hover:to-blue-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-bold py-3.5 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.23)] hover:-translate-y-0.5"
+              className="w-full bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 hover:to-blue-600 disabled:from-slate-800 disabled:to-slate-800 text-white font-bold py-3.5 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:-translate-y-0.5"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -166,34 +176,42 @@ export default function SecurityHubPage() {
           <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50">
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
               <h2 className="text-lg font-bold text-white tracking-tight">{t.resultsTitle}</h2>
-              {result.is_secure ? (
+              
+              {isQueued ? (
+                 <span className="text-xs font-bold bg-amber-950/60 text-amber-400 border border-amber-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                   ⏳ {t.statusQueued}
+                 </span>
+              ) : isSecure ? (
                 <span className="text-xs font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4" /> {t.statusPassed}
                 </span>
-              ) : (
+              ) : isBlocked ? (
                 <span className="text-xs font-bold bg-rose-950/60 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_0_15px_rgba(225,29,72,0.3)]">
                   <ShieldAlert className="w-4 h-4 animate-pulse" /> {t.statusFailed}
                 </span>
-              )}
+              ) : null}
             </div>
 
-            {/* Panel Forense basado en el formato exacto de tu script Python */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-               <div className="bg-[#0a0f18] border border-slate-800 p-4 rounded-xl text-center">
-                  <span className="block text-xs text-slate-500 uppercase font-semibold tracking-wider mb-1">{t.sumTotal}</span>
-                  <span className="text-2xl font-bold text-slate-300">{result.summary?.total || 0}</span>
-               </div>
-               <div className="bg-emerald-950/20 border border-emerald-900/30 p-4 rounded-xl text-center">
-                  <span className="block text-xs text-emerald-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumPassed}</span>
-                  <span className="text-2xl font-bold text-emerald-400">{result.summary?.passed || 0}</span>
-               </div>
-               <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl text-center">
-                  <span className="block text-xs text-rose-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumFailed}</span>
-                  <span className="text-2xl font-bold text-rose-400">{result.summary?.failed || 0}</span>
-               </div>
-            </div>
+            {/* Mapeo Dinámico de la Métrica SCM (Si existe) */}
+            {hasVeredictData && (
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                 <div className="bg-[#0a0f18] border border-slate-800 p-4 rounded-xl text-center">
+                    <span className="block text-xs text-slate-500 uppercase font-semibold tracking-wider mb-1">{t.sumTotal}</span>
+                    <span className="text-2xl font-bold text-slate-300">{result.summary?.total || result.pagination?.total_items || 0}</span>
+                 </div>
+                 <div className="bg-emerald-950/20 border border-emerald-900/30 p-4 rounded-xl text-center">
+                    <span className="block text-xs text-emerald-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumPassed}</span>
+                    <span className="text-2xl font-bold text-emerald-400">{result.summary?.passed || 0}</span>
+                 </div>
+                 <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl text-center">
+                    <span className="block text-xs text-rose-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumFailed}</span>
+                    <span className="text-2xl font-bold text-rose-400">{result.summary?.failed || result.violations?.length || 0}</span>
+                 </div>
+              </div>
+            )}
 
-            {!result.is_secure && result.violations && result.violations.length > 0 && (
+            {/* Tabla de Violaciones SCM Dinámica */}
+            {hasVeredictData && result.violations && result.violations.length > 0 && (
                <div className="mb-6 overflow-hidden rounded-xl border border-rose-900/50 shadow-inner">
                   <table className="w-full text-left border-collapse text-[13px]">
                      <thead>
@@ -207,14 +225,16 @@ export default function SecurityHubPage() {
                            <tr key={i} className="border-b border-slate-800/80 last:border-0">
                               <td className="py-3 px-4 text-slate-300 font-semibold align-top w-1/3">
                                  <div className="flex items-center gap-2">
-                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                                    {v.rule_name || 'Policy Violation'}
+                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                    <span>{v.rule_name || v.threat || 'Policy Violation'}</span>
                                  </div>
                               </td>
                               <td className="py-3 px-4 text-slate-400 align-top">
-                                 <span className="block text-rose-200/90">{v.description || v.threat_description}</span>
+                                 <span className="block text-rose-200/90 font-medium mb-1">
+                                    {v.description || v.threat_description}
+                                 </span>
                                  {v.file && (
-                                    <span className="inline-block mt-1.5 text-[11px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-cyan-400/80">
+                                    <span className="inline-block text-[11px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-cyan-400 font-mono">
                                        File: {v.file}
                                     </span>
                                  )}
