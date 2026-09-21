@@ -3,14 +3,13 @@ import logging
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, HttpUrl
+import requests
 
-# Importación del SDK oficial de Palo Alto Networks Prisma AIRS / AIMS
 from model_security_client.api import ModelSecurityAPIClient
 
 app = FastAPI(title="Prisma AIRS Model Security Scanner")
 logger = logging.getLogger("uvicorn.error")
 
-# Secreto interno para validar las peticiones procedentes del Proxy en Vercel
 INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN")
 
 class ScanRequest(BaseModel):
@@ -22,48 +21,70 @@ async def scan_endpoint(
     payload: ScanRequest,
     x_api_key: Optional[str] = Header(None)
 ):
-    """
-    Endpoint SÍNCRONO de Prisma AIRS.
-    Ejecuta el análisis contra la API de AIMS y retorna el resultado
-    físico completo a Vercel en la misma llamada HTTP.
-    """
-    # 1. Validación de seguridad Zero-Trust
     if INTERNAL_API_TOKEN and x_api_key != INTERNAL_API_TOKEN:
-        logger.warning("[-] Intento de acceso denegado: Token inválido.")
+        logger.warning("[-] Unauthorized access attempt: Invalid token.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acceso denegado: Cabecera x-api-key no válida."
+            detail="Access denied: Invalid x-api-key header."
         )
 
     try:
-        logger.info(f"[+] Iniciando escaneo síncrono Prisma AIRS para URI: {payload.model_url}")
+        logger.info(f"[+] Starting synchronous Prisma AIRS scan for URI: {payload.model_url}")
         
-        # El SDK lee automáticamente MODEL_SECURITY_CLIENT_ID, SECRET y TSG_ID de las Env Vars de Azure
         client = ModelSecurityAPIClient(
             base_url="https://api.sase.paloaltonetworks.com/aims"
         )
 
-        # 2. Ejecución síncrona en el motor de SCM / AIMS
+        # 1. Execute primary model scan in AIMS
         result = client.scan(
             security_group_uuid=payload.group_id,
             model_uri=str(payload.model_url)
         )
         
-        logger.info(f"[+] Escaneo completado. Outcome: {getattr(result, 'eval_outcome', 'SUCCESS')}")
-
-        # 3. Conversión del objeto de respuesta del SDK a un formato JSON serializable para FastAPI
+        # Convert SDK result object to dictionary
         if hasattr(result, "model_dump"):
-            return result.model_dump()
+            data = result.model_dump()
         elif hasattr(result, "dict"):
-            return result.dict()
-        elif isinstance(result, dict):
-            return result
+            data = result.dict()
         else:
-            return getattr(result, "__dict__", {"status": "success", "raw_result": str(result)})
+            data = getattr(result, "__dict__", {})
+
+        scan_uuid = data.get("uuid")
+        violations = []
+
+        # 2. Query detailed violations from SCM if scan UUID exists
+        if scan_uuid:
+            try:
+                if hasattr(client, "get_violations"):
+                    viol_res = client.get_violations(scan_uuid)
+                elif hasattr(client, "get_scan_violations"):
+                    viol_res = client.get_scan_violations(scan_uuid)
+                else:
+                    # Fallback REST call using client session/headers
+                    violations_url = f"https://api.sase.paloaltonetworks.com/aims/v1/scans/{scan_uuid}/violations"
+                    res = client.session.get(violations_url) if hasattr(client, "session") else requests.get(
+                        violations_url, 
+                        headers={"Authorization": getattr(client, "auth_header", "")}
+                    )
+                    viol_res = res.json()
+
+                if isinstance(viol_res, dict):
+                    violations = viol_res.get("violations", [])
+                elif isinstance(viol_res, list):
+                    violations = viol_res
+
+            except Exception as viol_err:
+                logger.warning(f"[!] Could not fetch detailed violations for scan {scan_uuid}: {str(viol_err)}")
+
+        # 3. Enrich payload with SCM violations array
+        data["violations"] = violations
+        logger.info(f"[+] Scan completed. Outcome: {data.get('eval_outcome')}. Total violations: {len(violations)}")
+        
+        return data
 
     except Exception as e:
-        logger.error(f"[!] Error ejecutando análisis en Prisma AIRS: {str(e)}", exc_info=True)
+        logger.error(f"[!] Error executing Prisma AIRS evaluation: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Fallo durante la evaluación en Prisma AIRS: {str(e)}"
+            detail=f"Prisma AIRS evaluation failed: {str(e)}"
         )

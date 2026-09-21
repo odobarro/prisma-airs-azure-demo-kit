@@ -1,46 +1,46 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield, AlertTriangle, ExternalLink, HelpCircle } from 'lucide-react';
 
 const i18n = {
   es: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
     title: 'Model & Skill Validation Hub',
-    subtitle: 'Análisis estático pre-despliegue para cumplimiento de licencias, vulnerabilidades (CVEs) y detección de código malicioso.',
-    modelUrlLabel: 'URL del Artefacto (Hugging Face / GitLab)',
+    subtitle: 'Pre-deployment static analysis for license compliance, software vulnerabilities (CVEs), and malicious tensor execution.',
+    modelUrlLabel: 'Artifact URL (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
-    scanBtn: 'Auditar Artefacto',
-    scanning: 'Conectando con Prisma AIRS en Azure...',
-    resultsTitle: 'Dictamen de Seguridad (SCM)',
-    statusPassed: 'APROBADO PARA DESPLIEGUE',
-    statusFailed: 'RIESGO DETECTADO - BLOQUEADO',
-    statusQueued: 'ESCANEO EN COLA / PROCESANDO EN SCM',
-    rawResponse: 'Telemetría de Inspección (Raw Payload)',
-    sumTotal: 'Reglas Evaluadas',
-    sumPassed: 'Reglas Aprobadas',
-    sumFailed: 'Violaciones SCM',
-    ruleTh: 'Regla Violada (SCM)',
-    detailTh: 'Descripción del Riesgo / Archivo',
+    scanBtn: 'Audit Artifact',
+    scanning: 'Evaluating policies in Strata Cloud Manager (AIMS)...',
+    resultsTitle: 'Security Verdict (Strata Cloud Manager)',
+    statusPassed: 'APPROVED FOR DEPLOYMENT',
+    statusFailed: 'CRITICAL RISK - DEPLOYMENT BLOCKED',
+    rawResponse: 'Inspection Telemetry (Raw Payload)',
+    sumTotal: 'Evaluated Rules',
+    sumPassed: 'Passed Rules',
+    sumFailed: 'SCM Violations',
+    ruleTh: 'Violated SCM Rule & Threat',
+    detailTh: 'Technical Detail & Remediation Steps',
+    remediationTitle: 'SCM Recommended Remediation Steps:',
   },
   en: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
     title: 'Model & Skill Validation Hub',
-    subtitle: 'Pre-deployment static analysis for license compliance, vulnerabilities (CVEs), and malicious code detection.',
+    subtitle: 'Pre-deployment static analysis for license compliance, software vulnerabilities (CVEs), and malicious tensor execution.',
     modelUrlLabel: 'Artifact URL (Hugging Face / GitLab)',
     groupLabel: 'Strata Cloud Manager Policy Group ID (UUID)',
     scanBtn: 'Audit Artifact',
-    scanning: 'Connecting to Prisma AIRS on Azure...',
-    resultsTitle: 'Security Verdict (SCM)',
+    scanning: 'Evaluating policies in Strata Cloud Manager (AIMS)...',
+    resultsTitle: 'Security Verdict (Strata Cloud Manager)',
     statusPassed: 'APPROVED FOR DEPLOYMENT',
-    statusFailed: 'RISK DETECTED - BLOCKED',
-    statusQueued: 'SCAN QUEUED / PROCESSING IN SCM',
+    statusFailed: 'CRITICAL RISK - DEPLOYMENT BLOCKED',
     rawResponse: 'Inspection Telemetry (Raw Payload)',
-    sumTotal: 'Rules Evaluated',
-    sumPassed: 'Rules Passed',
+    sumTotal: 'Evaluated Rules',
+    sumPassed: 'Passed Rules',
     sumFailed: 'SCM Violations',
-    ruleTh: 'Violated SCM Rule',
-    detailTh: 'Risk Description / File',
+    ruleTh: 'Violated SCM Rule & Threat',
+    detailTh: 'Technical Detail & Remediation Steps',
+    remediationTitle: 'SCM Recommended Remediation Steps:',
   },
 };
 
@@ -68,7 +68,7 @@ export default function SecurityHubPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Fallo en la comunicación con Prisma AIRS.');
+      if (!res.ok) throw new Error(data.error || 'Failed to communicate with Prisma AIRS proxy.');
       setResult(data);
     } catch (err: any) {
       setError(err.message);
@@ -77,13 +77,10 @@ export default function SecurityHubPage() {
     }
   };
 
-  // Lógica dinámica para identificar el estado real de la respuesta
-  const isQueued = result?.status === 'accepted' || result?.message === 'Scan queued';
-  const hasVeredictData = result?.summary !== undefined || result?.violations !== undefined;
-  
-  // Determinamos si es seguro basándonos en si hay violaciones (si es un payload SCM)
-  const isSecure = hasVeredictData && result?.violations?.length === 0;
-  const isBlocked = hasVeredictData && result?.violations?.length > 0;
+  const isBlocked = result?.eval_outcome === 'BLOCKED' || (result?.violations && result?.violations.length > 0);
+  const totalRules = result?.eval_summary?.total_rules || result?.enabled_rule_count_snapshot || 0;
+  const passedRules = result?.eval_summary?.rules_passed || 0;
+  const failedRules = result?.eval_summary?.rules_failed || result?.violations?.length || 0;
 
   return (
     <div className="min-h-screen bg-[#0a0f18] text-slate-200 font-mono selection:bg-cyan-900 selection:text-cyan-100">
@@ -166,7 +163,7 @@ export default function SecurityHubPage() {
           <div className="bg-rose-950/40 border border-rose-800/50 text-rose-300 p-5 rounded-2xl text-sm mb-8 flex items-start gap-3 shadow-lg">
              <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
              <div>
-                <strong className="block text-rose-400 mb-1">Error de Ejecución:</strong>
+                <strong className="block text-rose-400 mb-1">Execution Error:</strong>
                 {error}
              </div>
           </div>
@@ -177,41 +174,35 @@ export default function SecurityHubPage() {
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
               <h2 className="text-lg font-bold text-white tracking-tight">{t.resultsTitle}</h2>
               
-              {isQueued ? (
-                 <span className="text-xs font-bold bg-amber-950/60 text-amber-400 border border-amber-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                   ⏳ {t.statusQueued}
-                 </span>
-              ) : isSecure ? (
-                <span className="text-xs font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4" /> {t.statusPassed}
-                </span>
-              ) : isBlocked ? (
+              {isBlocked ? (
                 <span className="text-xs font-bold bg-rose-950/60 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_0_15px_rgba(225,29,72,0.3)]">
                   <ShieldAlert className="w-4 h-4 animate-pulse" /> {t.statusFailed}
                 </span>
-              ) : null}
+              ) : (
+                <span className="text-xs font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4" /> {t.statusPassed}
+                </span>
+              )}
             </div>
 
-            {/* Mapeo Dinámico de la Métrica SCM (Si existe) */}
-            {hasVeredictData && (
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                 <div className="bg-[#0a0f18] border border-slate-800 p-4 rounded-xl text-center">
-                    <span className="block text-xs text-slate-500 uppercase font-semibold tracking-wider mb-1">{t.sumTotal}</span>
-                    <span className="text-2xl font-bold text-slate-300">{result.summary?.total || result.pagination?.total_items || 0}</span>
-                 </div>
-                 <div className="bg-emerald-950/20 border border-emerald-900/30 p-4 rounded-xl text-center">
-                    <span className="block text-xs text-emerald-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumPassed}</span>
-                    <span className="text-2xl font-bold text-emerald-400">{result.summary?.passed || 0}</span>
-                 </div>
-                 <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl text-center">
-                    <span className="block text-xs text-rose-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumFailed}</span>
-                    <span className="text-2xl font-bold text-rose-400">{result.summary?.failed || result.violations?.length || 0}</span>
-                 </div>
-              </div>
-            )}
+            {/* SCM Summary Counters */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+               <div className="bg-[#0a0f18] border border-slate-800 p-4 rounded-xl text-center">
+                  <span className="block text-xs text-slate-500 uppercase font-semibold tracking-wider mb-1">{t.sumTotal}</span>
+                  <span className="text-2xl font-bold text-slate-300">{totalRules}</span>
+               </div>
+               <div className="bg-emerald-950/20 border border-emerald-900/30 p-4 rounded-xl text-center">
+                  <span className="block text-xs text-emerald-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumPassed}</span>
+                  <span className="text-2xl font-bold text-emerald-400">{passedRules}</span>
+               </div>
+               <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl text-center">
+                  <span className="block text-xs text-rose-600/80 uppercase font-semibold tracking-wider mb-1">{t.sumFailed}</span>
+                  <span className="text-2xl font-bold text-rose-400">{failedRules}</span>
+               </div>
+            </div>
 
-            {/* Tabla de Violaciones SCM Dinámica */}
-            {hasVeredictData && result.violations && result.violations.length > 0 && (
+            {/* Detailed Violations & Remediation Steps Table */}
+            {result.violations && result.violations.length > 0 && (
                <div className="mb-6 overflow-hidden rounded-xl border border-rose-900/50 shadow-inner">
                   <table className="w-full text-left border-collapse text-[13px]">
                      <thead>
@@ -223,20 +214,49 @@ export default function SecurityHubPage() {
                      <tbody className="bg-[#0a0f18]">
                         {result.violations.map((v: any, i: number) => (
                            <tr key={i} className="border-b border-slate-800/80 last:border-0">
-                              <td className="py-3 px-4 text-slate-300 font-semibold align-top w-1/3">
-                                 <div className="flex items-center gap-2">
-                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                    <span>{v.rule_name || v.threat || 'Policy Violation'}</span>
+                              <td className="py-4 px-4 text-slate-300 font-semibold align-top w-1/3">
+                                 <div className="flex items-center gap-2 mb-1">
+                                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                                    <span className="text-white font-bold">{v.rule_name || 'Policy Violation'}</span>
                                  </div>
-                              </td>
-                              <td className="py-3 px-4 text-slate-400 align-top">
-                                 <span className="block text-rose-200/90 font-medium mb-1">
-                                    {v.description || v.threat_description}
+                                 <span className="inline-block text-[10px] bg-rose-950/80 border border-rose-800/80 text-rose-400 px-2 py-0.5 rounded font-mono uppercase tracking-wider">
+                                    {v.threat || 'UNAPPROVED_FORMAT'}
                                  </span>
+                              </td>
+                              <td className="py-4 px-4 text-slate-400 align-top">
+                                 <p className="text-rose-200/90 font-medium mb-1.5 leading-relaxed">
+                                    {v.description || v.threat_description}
+                                 </p>
+                                 
                                  {v.file && (
-                                    <span className="inline-block text-[11px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-cyan-400 font-mono">
+                                    <span className="inline-block text-[11px] bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-cyan-400 font-mono mb-3">
                                        File: {v.file}
                                     </span>
+                                 )}
+
+                                 {/* SCM Remediation Guidance */}
+                                 {v.remediation?.steps && v.remediation.steps.length > 0 && (
+                                    <div className="mt-2 bg-slate-900/80 border border-slate-800 p-3 rounded-lg text-[11px] text-slate-300">
+                                       <span className="block font-semibold text-cyan-400 mb-1.5 flex items-center gap-1.5">
+                                          <HelpCircle className="w-3.5 h-3.5 text-cyan-500" />
+                                          {t.remediationTitle}
+                                       </span>
+                                       <ul className="list-disc list-inside space-y-1 text-slate-400">
+                                          {v.remediation.steps.map((step: string, sIdx: number) => (
+                                             <li key={sIdx}>{step}</li>
+                                          ))}
+                                       </ul>
+                                       {v.remediation.url && (
+                                          <a 
+                                             href={v.remediation.url} 
+                                             target="_blank" 
+                                             rel="noreferrer" 
+                                             className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 mt-2 font-semibold text-[10px] underline"
+                                          >
+                                             SCM Documentation <ExternalLink className="w-3 h-3" />
+                                          </a>
+                                       )}
+                                    </div>
                                  )}
                               </td>
                            </tr>
