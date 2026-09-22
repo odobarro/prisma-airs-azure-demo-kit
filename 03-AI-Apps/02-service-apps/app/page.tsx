@@ -105,33 +105,38 @@ export default function SecurityHubPage() {
   const [newGroupType, setNewGroupType] = useState<ModelSource>('HuggingFace');
   const [managerLoading, setManagerLoading] = useState<boolean>(true); 
 
-  // AQUÍ ESTÁ LA LÍNEA RESTAURADA
   const t = i18n[lang];
 
+  // Carga de grupos reales desde SCM al montar la página
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const res = await fetch('/api/groups');
+        const res = await fetch('/api/groups', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           
-          const updatedCatalog: Record<string, SourceCatalogItem> = {
-            HuggingFace: { ...INITIAL_CATALOG.HuggingFace, groups: [] as SecurityGroup[] },
-            GitLab: { ...INITIAL_CATALOG.GitLab, groups: [] as SecurityGroup[] }
-          };
+          if (Array.isArray(data) && data.length > 0) {
+            setCatalog(prev => {
+              const updated = { ...prev };
+              
+              const hfGroups: SecurityGroup[] = [];
+              const glGroups: SecurityGroup[] = [];
 
-          data.forEach((g: any) => {
-            const uiProvider = (g.provider === 'GITLAB' || g.provider === 'GitLab') ? 'GitLab' : 'HuggingFace';
-            updatedCatalog[uiProvider].groups.push({ name: g.name, uuid: g.uuid });
-          });
+              data.forEach((g: any) => {
+                const item = { name: g.name, uuid: g.uuid };
+                const prov = String(g.provider || '').toUpperCase();
+                if (prov.includes('GITLAB')) {
+                  glGroups.push(item);
+                } else {
+                  hfGroups.push(item);
+                }
+              });
 
-          if (updatedCatalog.HuggingFace.groups.length === 0) updatedCatalog.HuggingFace.groups = INITIAL_CATALOG.HuggingFace.groups;
-          if (updatedCatalog.GitLab.groups.length === 0) updatedCatalog.GitLab.groups = INITIAL_CATALOG.GitLab.groups;
+              if (hfGroups.length > 0) updated.HuggingFace.groups = hfGroups;
+              if (glGroups.length > 0) updated.GitLab.groups = glGroups;
 
-          setCatalog(updatedCatalog);
-          
-          if (updatedCatalog.HuggingFace.groups.length > 0) {
-            setGroupId(updatedCatalog.HuggingFace.groups[0].uuid);
+              return updated;
+            });
           }
         }
       } catch (err) {
@@ -144,6 +149,7 @@ export default function SecurityHubPage() {
     fetchGroups();
   }, []);
 
+  // Actualiza el ID seleccionado cuando cambia el catálogo o el proveedor
   useEffect(() => {
     if (catalog[source]?.groups.length > 0) {
       setGroupId(catalog[source].groups[0].uuid);
