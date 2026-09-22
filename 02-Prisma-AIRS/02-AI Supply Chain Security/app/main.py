@@ -5,35 +5,26 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from model_security_client import ModelSecurityAPIClient
-from model_security_client.exceptions import (
-    StorageAccessError,
-    ModelSecurityError,
-)
+# Importación oficial del SDK de Palo Alto Networks (Prisma AIRS)
+from model_security_client.api import ModelSecurityAPIClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("airs-backend")
 
 app = FastAPI(
     title="Prisma AIRS & AIMS Model Security Proxy",
-    description="Backend API proxy para la inspección estática de modelos de IA y gestión de grupos de políticas en Strata Cloud Manager.",
+    description="Backend API proxy para la inspección estática de modelos de IA y gestión de grupos de políticas en SCM.",
     version="1.1.0"
 )
 
-CLIENT_ID = os.getenv("MODEL_SECURITY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("MODEL_SECURITY_CLIENT_SECRET")
-TSG_ID = os.getenv("TSG_ID")
-
 def get_security_client() -> ModelSecurityAPIClient:
-    if not CLIENT_ID or not CLIENT_SECRET or not TSG_ID:
-        logger.error("[!] Error de configuración: Faltan credenciales de Prisma AIRS en el entorno.")
-        raise HTTPException(
-            status_code=500,
-            detail="Variables de entorno (MODEL_SECURITY_CLIENT_ID, MODEL_SECURITY_CLIENT_SECRET, TSG_ID) no configuradas en Azure."
-        )
-    
-    # LA SOLUCIÓN: Pasamos el argumento 'base_url' requerido por la firma
-    return ModelSecurityAPIClient("https://api.sase.paloaltonetworks.com/aims")
+    """
+    Instancia el cliente oficial. El SDK lee las credenciales automáticamente 
+    de las variables de entorno de Azure, pero EXIGE el base_url.
+    """
+    return ModelSecurityAPIClient(
+        base_url="https://api.sase.paloaltonetworks.com/aims"
+    )
 
 # --- Modelos de Pydantic ---
 
@@ -54,19 +45,20 @@ class GroupCreateRequest(BaseModel):
 async def health_check():
     return {
         "status": "online",
-        "service": "Prisma AIRS Scanner Backend",
-        "probes": "healthy"
+        "service": "Prisma AIRS Scanner Backend"
     }
 
 @app.post("/api/v1/scan")
 async def scan_endpoint(request: ScanRequest):
     logger.info(f"[+] Starting Prisma AIRS scan for URI: {request.model_url}")
-    client = get_security_client()
     
     try:
+        client = get_security_client()
+        
+        # CRÍTICO: Mapeo exacto a la firma que exige el SDK de Palo Alto
         scan_kwargs = {
-            "model_url": request.model_url,
-            "group_id": request.group_id
+            "model_uri": request.model_url,
+            "security_group_uuid": uuid.UUID(request.group_id) # Debe ser objeto UUID
         }
         
         if request.gitlab_token:
@@ -74,45 +66,29 @@ async def scan_endpoint(request: ScanRequest):
         if request.azure_token:
             scan_kwargs["azure_token"] = request.azure_token
 
+        # Llamada oficial al motor
         result = client.scan(**scan_kwargs)
         return result
 
-    except StorageAccessError as e:
-        logger.error(f"[!] Error de acceso a almacenamiento: {str(e)}")
-        raise HTTPException(
-            status_code=403,
-            detail=f"Acceso denegado al almacenamiento: {str(e)}"
-        )
-    except ModelSecurityError as e:
-        logger.error(f"[!] Error de auditoría Prisma AIRS: {str(e)}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error en la evaluación SCM: {str(e)}"
-        )
     except Exception as e:
-        logger.error(f"[!] Error no controlado durante el escaneo: {str(e)}")
+        logger.error(f"[!] Error en el escaneo de Prisma AIRS: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Internal Server Error: {str(e)}"
+            detail=f"Error en la evaluación de políticas de SCM: {str(e)}"
         )
 
 @app.post("/api/v1/groups")
 async def create_group_endpoint(request: GroupCreateRequest):
-    logger.info(f"[+] Creando nuevo Policy Group en SCM: {request.name} ({request.provider})")
+    logger.info(f"[+] Creando nuevo Policy Group en SCM: {request.name}")
     try:
-        generated_uuid = str(uuid.uuid4())
         return {
             "name": request.name,
-            "uuid": generated_uuid,
+            "uuid": str(uuid.uuid4()),
             "provider": request.provider,
             "status": "created"
         }
     except Exception as e:
-        logger.error(f"[!] Error al crear el Policy Group: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"No se pudo crear el grupo en SCM: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/v1/groups")
 async def delete_group_endpoint(uuid: str):
@@ -123,8 +99,4 @@ async def delete_group_endpoint(uuid: str):
             "status": "deleted"
         }
     except Exception as e:
-        logger.error(f"[!] Error al eliminar el Policy Group: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"No se pudo eliminar el grupo en SCM: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))
