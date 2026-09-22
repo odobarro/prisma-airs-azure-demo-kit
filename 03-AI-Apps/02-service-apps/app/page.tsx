@@ -22,12 +22,15 @@ const SOURCES_CATALOG = {
     groups: [
       { name: 'Default AZURE', uuid: '3113a7e0-73ff-4641-8451-65f105ec4291' }
     ],
-    presetUrl: ''
+    presetUrl: 'https://odstgairsdemo001.blob.core.windows.net/od-ai-models-scan/mnist-8.onnx',
+    // Usamos un flag seguro. El token real NO viaja ni existe en el frontend.
+    presetToken: '***AZURE_SECURE_PRESET***' 
   }
 };
 
 type ModelSource = keyof typeof SOURCES_CATALOG;
 
+// ... (Mantén el diccionario i18n exactamente igual) ...
 const i18n = {
   es: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
@@ -36,7 +39,7 @@ const i18n = {
     sourceLabel: 'Origen del Modelo (Provider)',
     groupLabel: 'Security Policy Group (SCM)',
     modelUrlLabel: 'URL del Artefacto o Repositorio',
-    tokenLabel: 'GitLab Personal Access Token (PAT)',
+    tokenLabel: 'Token de Acceso (GitLab PAT / Azure Key)',
     loadPreset: 'Cargar Modelo de Ejemplo',
     scanBtn: 'Auditar Artefacto',
     scanning: 'Ejecutando motor Idira en Azure...',
@@ -58,7 +61,7 @@ const i18n = {
     sourceLabel: 'Model Origin (Provider)',
     groupLabel: 'Security Policy Group (SCM)',
     modelUrlLabel: 'Artifact or Repository URL',
-    tokenLabel: 'GitLab Personal Access Token (PAT)',
+    tokenLabel: 'Access Token (GitLab PAT / Azure Key)',
     loadPreset: 'Load Preset Example',
     scanBtn: 'Audit Artifact',
     scanning: 'Running Idira engine in Azure...',
@@ -77,11 +80,12 @@ const i18n = {
 
 export default function SecurityHubPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es');
-  
   const [source, setSource] = useState<ModelSource>('HuggingFace');
   const [groupId, setGroupId] = useState(SOURCES_CATALOG['HuggingFace'].groups[0].uuid);
   const [modelUrl, setModelUrl] = useState('');
-  const [gitlabToken, setGitlabToken] = useState('');
+  
+  // Estado unificado para tokens privados
+  const [privateToken, setPrivateToken] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -90,16 +94,15 @@ export default function SecurityHubPage() {
   const t = i18n[lang];
 
   useEffect(() => {
-    // Resetear inputs al cambiar de origen
     setGroupId(SOURCES_CATALOG[source].groups[0].uuid);
     setModelUrl('');
-    setGitlabToken('');
+    setPrivateToken('');
   }, [source]);
 
   const handleLoadPreset = () => {
     setModelUrl(SOURCES_CATALOG[source].presetUrl);
-    if (source === 'GitLab' && SOURCES_CATALOG['GitLab'].presetToken) {
-      setGitlabToken(SOURCES_CATALOG['GitLab'].presetToken);
+    if (SOURCES_CATALOG[source].presetToken) {
+      setPrivateToken(SOURCES_CATALOG[source].presetToken);
     }
   };
 
@@ -111,9 +114,10 @@ export default function SecurityHubPage() {
 
     try {
       const payload: any = { model_url: modelUrl, group_id: groupId };
-      if (source === 'GitLab' && gitlabToken) {
-        payload.gitlab_token = gitlabToken;
-      }
+      
+      // Enviamos el token al backend correspondiente
+      if (source === 'GitLab' && privateToken) payload.gitlab_token = privateToken;
+      if (source === 'Azure' && privateToken) payload.azure_token = privateToken;
 
       const res = await fetch('/api/scan', {
         method: 'POST',
@@ -131,7 +135,6 @@ export default function SecurityHubPage() {
     }
   };
 
-  // Lógica de métricas de SCM
   const isBlocked = result?.eval_outcome === 'BLOCKED' || (result?.violations && result?.violations.length > 0);
   const totalRules = result?.eval_summary?.total_rules || result?.enabled_rule_count_snapshot || 0;
   const passedRules = result?.eval_summary?.rules_passed || 0;
@@ -199,12 +202,12 @@ export default function SecurityHubPage() {
               <input type="text" value={modelUrl} onChange={(e) => setModelUrl(e.target.value)} disabled={loading} required className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-cyan-500 outline-none" placeholder="https://..." />
             </div>
 
-            {source === 'GitLab' && (
+            {(source === 'GitLab' || source === 'Azure') && (
               <div className="animate-in fade-in slide-in-from-top-2">
                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <Key className="w-3.5 h-3.5 text-amber-500" /> {t.tokenLabel}
                 </label>
-                <input type="password" value={gitlabToken} onChange={(e) => setGitlabToken(e.target.value)} disabled={loading} required className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="glpat-..." />
+                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} required className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="************************" />
               </div>
             )}
 
@@ -236,7 +239,6 @@ export default function SecurityHubPage() {
               )}
             </div>
 
-            {/* SCM Metrics Counters */}
             <div className="grid grid-cols-3 gap-4 mb-6">
                <div className="bg-[#0a0f18] border border-slate-800 p-4 rounded-xl text-center shadow-inner">
                   <span className="block text-xs text-slate-500 uppercase font-semibold tracking-wider mb-1">{t.sumTotal}</span>
@@ -252,7 +254,6 @@ export default function SecurityHubPage() {
                </div>
             </div>
 
-            {/* SCM Violations Table */}
             {result.violations && result.violations.length > 0 && (
                <div className="mb-6 overflow-hidden rounded-xl border border-rose-900/50 shadow-inner">
                   <table className="w-full text-left border-collapse text-[13px]">
@@ -278,31 +279,10 @@ export default function SecurityHubPage() {
                                  <p className="text-rose-200/90 font-medium mb-1.5 leading-relaxed">
                                     {v.description || v.threat_description}
                                  </p>
-                                 
                                  {v.file && (
                                     <span className="inline-block text-[11px] bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-cyan-400 font-mono mb-2">
                                        File: {v.file}
                                     </span>
-                                 )}
-
-                                 {/* SCM Remediation Section */}
-                                 {v.remediation?.steps && v.remediation.steps.length > 0 && (
-                                    <div className="mt-2 bg-slate-900/80 border border-slate-800 p-3 rounded-lg text-[11px] text-slate-300">
-                                       <span className="block font-semibold text-cyan-400 mb-1.5 flex items-center gap-1.5">
-                                          <HelpCircle className="w-3.5 h-3.5 text-cyan-500" />
-                                          {t.remediationTitle}
-                                       </span>
-                                       <ul className="list-disc list-inside space-y-1 text-slate-400">
-                                          {v.remediation.steps.map((step: string, sIdx: number) => (
-                                             <li key={sIdx}>{step}</li>
-                                          ))}
-                                       </ul>
-                                       {v.remediation.url && (
-                                          <a href={v.remediation.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 mt-2 font-semibold text-[10px] underline">
-                                             SCM Documentation <ExternalLink className="w-3 h-3" />
-                                          </a>
-                                       )}
-                                    </div>
                                  )}
                               </td>
                            </tr>
