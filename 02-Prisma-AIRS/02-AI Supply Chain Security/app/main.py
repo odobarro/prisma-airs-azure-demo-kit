@@ -4,7 +4,11 @@ import uuid
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from model_security_client import ModelSecurityClient
+
+# 1. Corrección de la importación principal de la clase
+from model_security_client import ModelSecurityAPIClient
+
+# 2. Restauración de las excepciones específicas del SDK (vitales para que funcione el escaneo)
 from model_security_client.exceptions import (
     StorageAccessError,
     ModelSecurityError,
@@ -20,20 +24,20 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# Carga de credenciales desde variables de entorno / secretos de ACA
+# Carga de credenciales
 CLIENT_ID = os.getenv("MODEL_SECURITY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("MODEL_SECURITY_CLIENT_SECRET")
 TSG_ID = os.getenv("TSG_ID")
 
 # Inicialización diferida / Singleton del cliente de Palo Alto
-def get_security_client() -> ModelSecurityClient:
+def get_security_client() -> ModelSecurityAPIClient:
     if not CLIENT_ID or not CLIENT_SECRET or not TSG_ID:
         logger.error("[!] Error de configuración: Faltan credenciales de Prisma AIRS en el entorno.")
         raise HTTPException(
             status_code=500,
             detail="Credenciales de Prisma AIRS / SCM no configuradas en el servidor."
         )
-    return ModelSecurityClient(
+    return ModelSecurityAPIClient(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         tsg_id=TSG_ID
@@ -49,7 +53,7 @@ class ScanRequest(BaseModel):
 
 class GroupCreateRequest(BaseModel):
     name: str
-    provider: str  # 'HuggingFace' o 'GitLab'
+    provider: str
 
 # --- Endpoints ---
 
@@ -57,8 +61,7 @@ class GroupCreateRequest(BaseModel):
 async def health_check():
     return {
         "status": "online",
-        "service": "Prisma AIRS Scanner Backend",
-        "identity_integration": "Managed Identity / Zero-Trust Enabled"
+        "service": "Prisma AIRS Scanner Backend"
     }
 
 @app.post("/api/v1/scan")
@@ -67,7 +70,6 @@ async def scan_endpoint(request: ScanRequest):
     client = get_security_client()
     
     try:
-        # Preparamos las opciones de escaneo según el origen
         scan_kwargs = {
             "model_url": request.model_url,
             "group_id": request.group_id
@@ -78,41 +80,38 @@ async def scan_endpoint(request: ScanRequest):
         if request.azure_token:
             scan_kwargs["azure_token"] = request.azure_token
 
-        # Ejecutamos el análisis estático en la nube de Palo Alto (AIMS)
+        # Llamada real al SDK de Prisma AIRS
         result = client.scan(**scan_kwargs)
         return result
 
+    # Restauramos el manejo de errores original para que no rompa el hilo principal
     except StorageAccessError as e:
         logger.error(f"[!] Error de acceso a almacenamiento: {str(e)}")
         raise HTTPException(
             status_code=403,
-            detail=f"Acceso denegado al almacenamiento o recurso de red: {str(e)}"
+            detail=f"Acceso denegado al almacenamiento: {str(e)}"
         )
     except ModelSecurityError as e:
         logger.error(f"[!] Error de auditoría Prisma AIRS: {str(e)}")
         raise HTTPException(
             status_code=400,
-            detail=f"Error en la evaluación de políticas de SCM: {str(e)}"
+            detail=f"Error en la evaluación SCM: {str(e)}"
         )
     except Exception as e:
-        logger.error(f"[!] Error no controlado en el backend: {str(e)}")
+        logger.error(f"[!] Error no controlado: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Internal Server Error: {str(e)}"
         )
 
+# --- Nuevos Endpoints de Gestión de Grupos ---
+
 @app.post("/api/v1/groups")
 async def create_group_endpoint(request: GroupCreateRequest):
     logger.info(f"[+] Creando nuevo Policy Group en SCM: {request.name} ({request.provider})")
-    
     try:
-        # En producción real, invocamos el método de creación de grupos del SDK:
-        # scm_group = client.create_policy_group(name=request.name, provider=request.provider)
-        # generated_uuid = scm_group.uuid
-        
-        # Generamos un UUID v4 criptográfico para asociarlo al nombre amigable
+        # Aquí iría: new_group = client.create_group(...)
         generated_uuid = str(uuid.uuid4())
-        
         return {
             "name": request.name,
             "uuid": generated_uuid,
@@ -123,14 +122,14 @@ async def create_group_endpoint(request: GroupCreateRequest):
         logger.error(f"[!] Error al crear el Policy Group: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"No se pudo crear el grupo en Strata Cloud Manager: {str(e)}"
+            detail=f"No se pudo crear el grupo en SCM: {str(e)}"
         )
 
 @app.delete("/api/v1/groups")
 async def delete_group_endpoint(uuid: str):
     logger.info(f"[-] Eliminando Policy Group de SCM con UUID: {uuid}")
     try:
-        # En producción real: client.delete_policy_group(uuid=uuid)
+        # Aquí iría: client.delete_group(uuid)
         return {
             "uuid": uuid,
             "status": "deleted"
