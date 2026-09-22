@@ -5,16 +5,13 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# 1. Importación correcta: La clase principal es ModelSecurityClient
-from model_security_client import ModelSecurityClient
-
-# 2. Excepciones para capturar problemas de escaneo
+# Clase e importaciones oficiales del SDK de Prisma AIRS
+from model_security_client import ModelSecurityAPIClient
 from model_security_client.exceptions import (
     StorageAccessError,
     ModelSecurityError,
 )
 
-# Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("airs-backend")
 
@@ -23,6 +20,25 @@ app = FastAPI(
     description="Backend API proxy para la inspección estática de modelos de IA y gestión de grupos de políticas en Strata Cloud Manager.",
     version="1.1.0"
 )
+
+CLIENT_ID = os.getenv("MODEL_SECURITY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("MODEL_SECURITY_CLIENT_SECRET")
+TSG_ID = os.getenv("TSG_ID")
+
+def get_security_client() -> ModelSecurityAPIClient:
+    if not CLIENT_ID or not CLIENT_SECRET or not TSG_ID:
+        logger.error("[!] Error de configuración: Faltan credenciales de Prisma AIRS en el entorno.")
+        raise HTTPException(
+            status_code=500,
+            detail="Credenciales de Prisma AIRS / SCM no configuradas en el servidor."
+        )
+    
+    try:
+        # Instanciación sin argumentos por nombre: lee el entorno automáticamente
+        return ModelSecurityAPIClient()
+    except TypeError:
+        # Fallback posicional si la versión en el contenedor exige argumentos no nombrados
+        return ModelSecurityAPIClient(CLIENT_ID, CLIENT_SECRET, TSG_ID)
 
 # --- Modelos de Pydantic ---
 
@@ -38,7 +54,6 @@ class GroupCreateRequest(BaseModel):
 
 # --- Endpoints ---
 
-# Endpoints para mantener vivo el Health Probe de Azure Container Apps
 @app.get("/")
 @app.get("/health")
 async def health_check():
@@ -51,20 +66,8 @@ async def health_check():
 @app.post("/api/v1/scan")
 async def scan_endpoint(request: ScanRequest):
     logger.info(f"[+] Starting Prisma AIRS scan for URI: {request.model_url}")
+    client = get_security_client()
     
-    try:
-        # INICIALIZACIÓN CORRECTA:
-        # El SDK lee automáticamente las variables de entorno:
-        # MODEL_SECURITY_CLIENT_ID, MODEL_SECURITY_CLIENT_SECRET, TSG_ID
-        # No debemos pasarlas como kwargs en el constructor.
-        client = ModelSecurityClient()
-    except Exception as init_err:
-        logger.error(f"[!] Error inicializando el cliente de Prisma AIRS: {str(init_err)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Fallo al iniciar el SDK de seguridad. Revisa las variables de entorno en Azure."
-        )
-
     try:
         scan_kwargs = {
             "model_url": request.model_url,
@@ -76,7 +79,6 @@ async def scan_endpoint(request: ScanRequest):
         if request.azure_token:
             scan_kwargs["azure_token"] = request.azure_token
 
-        # Ejecución del motor de auditoría
         result = client.scan(**scan_kwargs)
         return result
 
