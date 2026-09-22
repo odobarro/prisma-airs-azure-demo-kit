@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Clase e importaciones oficiales del SDK de Prisma AIRS
+# Importación nativa del cliente de Palo Alto AIRS
 from model_security_client import ModelSecurityAPIClient
 from model_security_client.exceptions import (
     StorageAccessError,
@@ -21,26 +21,27 @@ app = FastAPI(
     version="1.1.0"
 )
 
+# Lectura de variables de entorno para verificación previa
 CLIENT_ID = os.getenv("MODEL_SECURITY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("MODEL_SECURITY_CLIENT_SECRET")
 TSG_ID = os.getenv("TSG_ID")
 
 def get_security_client() -> ModelSecurityAPIClient:
+    """
+    Verifica que las variables existan en el contenedor y delega 
+    la autenticación al lector nativo de entorno del SDK.
+    """
     if not CLIENT_ID or not CLIENT_SECRET or not TSG_ID:
         logger.error("[!] Error de configuración: Faltan credenciales de Prisma AIRS en el entorno.")
         raise HTTPException(
             status_code=500,
-            detail="Credenciales de Prisma AIRS / SCM no configuradas en el servidor."
+            detail="Credenciales de Prisma AIRS (MODEL_SECURITY_CLIENT_ID, MODEL_SECURITY_CLIENT_SECRET, TSG_ID) no configuradas en Azure Container Apps."
         )
     
-    try:
-        # Instanciación sin argumentos por nombre: lee el entorno automáticamente
-        return ModelSecurityAPIClient()
-    except TypeError:
-        # Fallback posicional si la versión en el contenedor exige argumentos no nombrados
-        return ModelSecurityAPIClient(CLIENT_ID, CLIENT_SECRET, TSG_ID)
+    # Instanciación limpia sin parámetros posicionales
+    return ModelSecurityAPIClient()
 
-# --- Modelos de Pydantic ---
+# --- Modelos Pydantic ---
 
 class ScanRequest(BaseModel):
     model_url: str
