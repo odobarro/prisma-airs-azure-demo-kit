@@ -5,7 +5,6 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Importación correcta requerida por el entorno
 from model_security_client import ModelSecurityAPIClient
 from model_security_client.exceptions import (
     StorageAccessError,
@@ -26,10 +25,6 @@ CLIENT_SECRET = os.getenv("MODEL_SECURITY_CLIENT_SECRET")
 TSG_ID = os.getenv("TSG_ID")
 
 def get_security_client() -> ModelSecurityAPIClient:
-    """
-    Verifica la existencia de credenciales y delega la autenticación
-    al lector de variables de entorno nativo del SDK.
-    """
     if not CLIENT_ID or not CLIENT_SECRET or not TSG_ID:
         logger.error("[!] Error de configuración: Faltan credenciales de Prisma AIRS en el entorno.")
         raise HTTPException(
@@ -37,8 +32,8 @@ def get_security_client() -> ModelSecurityAPIClient:
             detail="Variables de entorno (MODEL_SECURITY_CLIENT_ID, MODEL_SECURITY_CLIENT_SECRET, TSG_ID) no configuradas en Azure."
         )
     
-    # Instanciación limpia sin parámetros: lee os.environ automáticamente
-    return ModelSecurityAPIClient()
+    # LA SOLUCIÓN: Pasamos el argumento 'base_url' requerido por la firma
+    return ModelSecurityAPIClient("https://api.sase.paloaltonetworks.com/aims")
 
 # --- Modelos de Pydantic ---
 
