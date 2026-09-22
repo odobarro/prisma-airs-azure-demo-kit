@@ -1,89 +1,47 @@
 import { NextResponse } from 'next/server';
 
-function getBackendUrl(endpointPath: string): string {
-  const envUrl = process.env.NEXT_PUBLIC_SCANNER_API_URL || 'https://od-airs-scanner-api.azurecontainerapps.io/api/v1/scan';
-  const baseUrl = envUrl.replace(/\/scan\/?$/, '').replace(/\/+$/, '');
-  return baseUrl.endsWith('/api/v1') ? `${baseUrl}${endpointPath}` : `${baseUrl}/api/v1${endpointPath}`;
+// Asegúrate de que esta variable apunta a tu Azure Container App (ej: https://od-airs-scanner-api.kindpebble-....westeurope.azurecontainerapps.io)
+const BACKEND_URL = process.env.AZURE_BACKEND_URL || "http://localhost:8000";
+
+export async function GET() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/v1/groups`, {
+            cache: 'no-store' // Vital para que no cachee grupos antiguos
+        });
+        const data = await response.json();
+        return NextResponse.json(data, { status: response.status });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 }
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { name, provider } = body;
-
-    if (!name || !provider) {
-      return NextResponse.json(
-        { error: 'Faltan parámetros obligatorios (name, provider)' },
-        { status: 400 }
-      );
-    }
-
-    const groupsUrl = getBackendUrl('/groups');
-    const apiKey = process.env.SCANNER_INTERNAL_API_KEY || '';
-
-    const response = await fetch(groupsUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-      },
-      body: JSON.stringify({ name, provider }),
-    });
-
-    const rawText = await response.text();
-    let data: any;
     try {
-      data = JSON.parse(rawText);
-    } catch {
-      return NextResponse.json(
-        { error: `Error del servidor de Azure (${response.status}): ${rawText || response.statusText}` },
-        { status: response.status || 500 }
-      );
+        const body = await request.json();
+        const response = await fetch(`${BACKEND_URL}/api/v1/groups`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        return NextResponse.json(data, { status: response.status });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    return NextResponse.json(data, { status: response.status });
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
 }
 
 export async function DELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const uuid = searchParams.get('uuid');
-
-    if (!uuid) {
-      return NextResponse.json(
-        { error: 'UUID de grupo no proporcionado' },
-        { status: 400 }
-      );
-    }
-
-    const groupsUrl = `${getBackendUrl('/groups')}?uuid=${encodeURIComponent(uuid)}`;
-    const apiKey = process.env.SCANNER_INTERNAL_API_KEY || '';
-
-    const response = await fetch(groupsUrl, {
-      method: 'DELETE',
-      headers: {
-        'x-api-key': apiKey,
-      },
-    });
-
-    const rawText = await response.text();
-    let data: any;
     try {
-      data = JSON.parse(rawText);
-    } catch {
-      return NextResponse.json(
-        { error: `Error del servidor de Azure (${response.status}): ${rawText || response.statusText}` },
-        { status: response.status || 500 }
-      );
+        // Obtenemos el UUID de los parámetros de la URL (?uuid=...)
+        const { searchParams } = new URL(request.url);
+        const uuid = searchParams.get('uuid');
+
+        const response = await fetch(`${BACKEND_URL}/api/v1/groups?uuid=${uuid}`, {
+            method: 'DELETE',
+        });
+        const data = await response.json();
+        return NextResponse.json(data, { status: response.status });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    return NextResponse.json(data, { status: response.status });
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
 }
