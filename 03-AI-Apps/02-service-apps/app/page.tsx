@@ -103,11 +103,8 @@ export default function SecurityHubPage() {
   const [showManager, setShowManager] = useState<boolean>(false);
   const [newGroupName, setNewGroupName] = useState<string>('');
   const [newGroupType, setNewGroupType] = useState<ModelSource>('HuggingFace');
-  const [managerLoading, setManagerLoading] = useState<boolean>(true); // Inicia cargando
+  const [managerLoading, setManagerLoading] = useState<boolean>(true); 
 
-  const t = i18n[lang];
-
-  // 1. NUEVO HOOK: Cargar los grupos desde SCM al inicio y sustituir el catálogo
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -115,24 +112,22 @@ export default function SecurityHubPage() {
         if (res.ok) {
           const data = await res.json();
           
-          const updatedCatalog = {
-            HuggingFace: { ...INITIAL_CATALOG.HuggingFace, groups: [] },
-            GitLab: { ...INITIAL_CATALOG.GitLab, groups: [] }
+          // FIX: Forzamos a TypeScript a entender que estos arrays vacíos son de tipo SecurityGroup[]
+          const updatedCatalog: Record<string, SourceCatalogItem> = {
+            HuggingFace: { ...INITIAL_CATALOG.HuggingFace, groups: [] as SecurityGroup[] },
+            GitLab: { ...INITIAL_CATALOG.GitLab, groups: [] as SecurityGroup[] }
           };
 
-          // Distribuir los grupos reales devueltos por SCM
           data.forEach((g: any) => {
             const uiProvider = (g.provider === 'GITLAB' || g.provider === 'GitLab') ? 'GitLab' : 'HuggingFace';
             updatedCatalog[uiProvider].groups.push({ name: g.name, uuid: g.uuid });
           });
 
-          // Si vienen vacíos, caemos en gracia a los de por defecto
           if (updatedCatalog.HuggingFace.groups.length === 0) updatedCatalog.HuggingFace.groups = INITIAL_CATALOG.HuggingFace.groups;
           if (updatedCatalog.GitLab.groups.length === 0) updatedCatalog.GitLab.groups = INITIAL_CATALOG.GitLab.groups;
 
           setCatalog(updatedCatalog);
           
-          // Seleccionar el primer grupo disponible de HuggingFace por defecto
           if (updatedCatalog.HuggingFace.groups.length > 0) {
             setGroupId(updatedCatalog.HuggingFace.groups[0].uuid);
           }
@@ -147,7 +142,6 @@ export default function SecurityHubPage() {
     fetchGroups();
   }, []);
 
-  // Sincronizar el dropdown de grupo cuando cambia el proveedor (source)
   useEffect(() => {
     if (catalog[source]?.groups.length > 0) {
       setGroupId(catalog[source].groups[0].uuid);
@@ -238,7 +232,6 @@ export default function SecurityHubPage() {
         return updated;
       });
       
-      // Resetear dropdown si borramos el que teníamos seleccionado
       if (groupId === groupUuid && catalog[groupType].groups.length > 0) {
         setGroupId(catalog[groupType].groups[0].uuid);
       }
