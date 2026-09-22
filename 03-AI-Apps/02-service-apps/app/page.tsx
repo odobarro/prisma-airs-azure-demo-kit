@@ -28,13 +28,6 @@ const SOURCES_CATALOG: Record<string, SourceCatalogItem> = {
     ],
     presetUrl: 'https://gitlab.com/netsec-sc/airs-test/-/ml/models/3007547/versions/3019068',
     presetToken: 'glpat-XdfdIINaiQMLWLtbXMzD92M6MQpvOjEKdTpubjU1OA8.01.171hs2q0c'
-  },
-  Azure: {
-    groups: [
-      { name: 'Default AZURE', uuid: '3113a7e0-73ff-4641-8451-65f105ec4291' }
-    ],
-    presetUrl: 'https://odstgairsdemo001.blob.core.windows.net/od-ai-models-scan/mnist-8.onnx',
-    presetToken: '***AZURE_SECURE_PRESET***' 
   }
 };
 
@@ -48,10 +41,10 @@ const i18n = {
     sourceLabel: 'Origen del Modelo (Provider)',
     groupLabel: 'Security Policy Group (SCM)',
     modelUrlLabel: 'URL del Artefacto o Repositorio',
-    tokenLabel: 'Token de Acceso (GitLab PAT / Azure Key)',
+    tokenLabel: 'Token de Acceso (GitLab PAT)',
     loadPreset: 'Cargar Modelo de Ejemplo',
     scanBtn: 'Auditar Artefacto',
-    scanning: 'Ejecutando motor Idira en Azure...',
+    scanning: 'Ejecutando motor de escaneo en Prisma AIRS...',
     resultsTitle: 'Veredicto SCM',
     statusPassed: 'APROBADO PARA DESPLIEGUE',
     statusFailed: 'RIESGO DETECTADO - BLOQUEADO',
@@ -70,10 +63,10 @@ const i18n = {
     sourceLabel: 'Model Origin (Provider)',
     groupLabel: 'Security Policy Group (SCM)',
     modelUrlLabel: 'Artifact or Repository URL',
-    tokenLabel: 'Access Token (GitLab PAT / Azure Key)',
+    tokenLabel: 'Access Token (GitLab PAT)',
     loadPreset: 'Load Preset Example',
     scanBtn: 'Audit Artifact',
-    scanning: 'Running Idira engine in Azure...',
+    scanning: 'Running scan engine in Prisma AIRS...',
     resultsTitle: 'SCM Verdict',
     statusPassed: 'APPROVED FOR DEPLOYMENT',
     statusFailed: 'RISK DETECTED - BLOCKED',
@@ -127,7 +120,6 @@ export default function SecurityHubPage() {
       const payload: Record<string, any> = { model_url: modelUrl, group_id: groupId };
       
       if (source === 'GitLab' && privateToken) payload.gitlab_token = privateToken;
-      if (source === 'Azure' && privateToken) payload.azure_token = privateToken;
 
       const res = await fetch('/api/scan', {
         method: 'POST',
@@ -212,13 +204,12 @@ export default function SecurityHubPage() {
               <input type="text" value={modelUrl} onChange={(e) => setModelUrl(e.target.value)} disabled={loading} required className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-cyan-500 outline-none" placeholder="https://..." />
             </div>
 
-            {(source === 'GitLab' || source === 'Azure') && (
+            {source === 'GitLab' && (
               <div className="animate-in fade-in slide-in-from-top-2">
                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <Key className="w-3.5 h-3.5 text-amber-500" /> {t.tokenLabel}
                 </label>
-                {/* AHORA ES OPCIONAL. Sin el atributo 'required' */}
-                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="Opcional (Ej. si usas URL SAS)" />
+                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="Opcional (Ej. glpat-XXXX...)" />
               </div>
             )}
 
