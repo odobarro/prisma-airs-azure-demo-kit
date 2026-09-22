@@ -3,7 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield, AlertTriangle, Database, Cloud, Key, FileInput, HelpCircle, ExternalLink } from 'lucide-react';
 
-const SOURCES_CATALOG = {
+interface SecurityGroup {
+  name: string;
+  uuid: string;
+}
+
+interface SourceCatalogItem {
+  groups: SecurityGroup[];
+  presetUrl: string;
+  presetToken?: string;
+}
+
+const SOURCES_CATALOG: Record<string, SourceCatalogItem> = {
   HuggingFace: {
     groups: [
       { name: 'HuggingFace_Scan', uuid: 'a6be1f6f-4d8e-4f78-9ebf-7339d1646bb0' },
@@ -23,14 +34,12 @@ const SOURCES_CATALOG = {
       { name: 'Default AZURE', uuid: '3113a7e0-73ff-4641-8451-65f105ec4291' }
     ],
     presetUrl: 'https://odstgairsdemo001.blob.core.windows.net/od-ai-models-scan/mnist-8.onnx',
-    // Usamos un flag seguro. El token real NO viaja ni existe en el frontend.
     presetToken: '***AZURE_SECURE_PRESET***' 
   }
 };
 
 type ModelSource = keyof typeof SOURCES_CATALOG;
 
-// ... (Mantén el diccionario i18n exactamente igual) ...
 const i18n = {
   es: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
@@ -81,13 +90,12 @@ const i18n = {
 export default function SecurityHubPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es');
   const [source, setSource] = useState<ModelSource>('HuggingFace');
-  const [groupId, setGroupId] = useState(SOURCES_CATALOG['HuggingFace'].groups[0].uuid);
-  const [modelUrl, setModelUrl] = useState('');
+  const [groupId, setGroupId] = useState<string>(SOURCES_CATALOG['HuggingFace'].groups[0].uuid);
+  const [modelUrl, setModelUrl] = useState<string>('');
   
-  // Estado unificado para tokens privados
-  const [privateToken, setPrivateToken] = useState('');
+  const [privateToken, setPrivateToken] = useState<string>('');
   
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,9 +108,12 @@ export default function SecurityHubPage() {
   }, [source]);
 
   const handleLoadPreset = () => {
-    setModelUrl(SOURCES_CATALOG[source].presetUrl);
-    if (SOURCES_CATALOG[source].presetToken) {
-      setPrivateToken(SOURCES_CATALOG[source].presetToken);
+    const catalogItem = SOURCES_CATALOG[source];
+    setModelUrl(catalogItem.presetUrl);
+    if (catalogItem.presetToken) {
+      setPrivateToken(catalogItem.presetToken);
+    } else {
+      setPrivateToken('');
     }
   };
 
@@ -113,9 +124,8 @@ export default function SecurityHubPage() {
     setError(null);
 
     try {
-      const payload: any = { model_url: modelUrl, group_id: groupId };
+      const payload: Record<string, any> = { model_url: modelUrl, group_id: groupId };
       
-      // Enviamos el token al backend correspondiente
       if (source === 'GitLab' && privateToken) payload.gitlab_token = privateToken;
       if (source === 'Azure' && privateToken) payload.azure_token = privateToken;
 
@@ -283,6 +293,24 @@ export default function SecurityHubPage() {
                                     <span className="inline-block text-[11px] bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-cyan-400 font-mono mb-2">
                                        File: {v.file}
                                     </span>
+                                 )}
+                                 {v.remediation?.steps && v.remediation.steps.length > 0 && (
+                                    <div className="mt-2 bg-slate-900/80 border border-slate-800 p-3 rounded-lg text-[11px] text-slate-300">
+                                       <span className="block font-semibold text-cyan-400 mb-1.5 flex items-center gap-1.5">
+                                          <HelpCircle className="w-3.5 h-3.5 text-cyan-500" />
+                                          {t.remediationTitle}
+                                       </span>
+                                       <ul className="list-disc list-inside space-y-1 text-slate-400">
+                                          {v.remediation.steps.map((step: string, sIdx: number) => (
+                                             <li key={sIdx}>{step}</li>
+                                          ))}
+                                       </ul>
+                                       {v.remediation.url && (
+                                          <a href={v.remediation.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 mt-2 font-semibold text-[10px] underline">
+                                             SCM Documentation <ExternalLink className="w-3 h-3" />
+                                          </a>
+                                       )}
+                                    </div>
                                  )}
                               </td>
                            </tr>
