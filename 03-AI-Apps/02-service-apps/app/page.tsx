@@ -92,7 +92,7 @@ export default function SecurityHubPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es');
   const [catalog, setCatalog] = useState<Record<string, SourceCatalogItem>>(INITIAL_CATALOG);
   const [source, setSource] = useState<ModelSource>('HuggingFace');
-  const [groupId, setGroupId] = useState<string>(INITIAL_CATALOG['HuggingFace'].groups[0].uuid);
+  const [groupId, setGroupId] = useState<string>('');
   const [modelUrl, setModelUrl] = useState<string>('');
   const [privateToken, setPrivateToken] = useState<string>('');
   
@@ -100,14 +100,54 @@ export default function SecurityHubPage() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados para la gestión dinámica de grupos (Sin exponer UUID al usuario)
   const [showManager, setShowManager] = useState<boolean>(false);
   const [newGroupName, setNewGroupName] = useState<string>('');
   const [newGroupType, setNewGroupType] = useState<ModelSource>('HuggingFace');
-  const [managerLoading, setManagerLoading] = useState<boolean>(false);
+  const [managerLoading, setManagerLoading] = useState<boolean>(true); // Inicia cargando
 
   const t = i18n[lang];
 
+  // 1. NUEVO HOOK: Cargar los grupos desde SCM al inicio y sustituir el catálogo
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const res = await fetch('/api/groups');
+        if (res.ok) {
+          const data = await res.json();
+          
+          const updatedCatalog = {
+            HuggingFace: { ...INITIAL_CATALOG.HuggingFace, groups: [] },
+            GitLab: { ...INITIAL_CATALOG.GitLab, groups: [] }
+          };
+
+          // Distribuir los grupos reales devueltos por SCM
+          data.forEach((g: any) => {
+            const uiProvider = (g.provider === 'GITLAB' || g.provider === 'GitLab') ? 'GitLab' : 'HuggingFace';
+            updatedCatalog[uiProvider].groups.push({ name: g.name, uuid: g.uuid });
+          });
+
+          // Si vienen vacíos, caemos en gracia a los de por defecto
+          if (updatedCatalog.HuggingFace.groups.length === 0) updatedCatalog.HuggingFace.groups = INITIAL_CATALOG.HuggingFace.groups;
+          if (updatedCatalog.GitLab.groups.length === 0) updatedCatalog.GitLab.groups = INITIAL_CATALOG.GitLab.groups;
+
+          setCatalog(updatedCatalog);
+          
+          // Seleccionar el primer grupo disponible de HuggingFace por defecto
+          if (updatedCatalog.HuggingFace.groups.length > 0) {
+            setGroupId(updatedCatalog.HuggingFace.groups[0].uuid);
+          }
+        }
+      } catch (err) {
+        console.error("Error sincronizando grupos con SCM:", err);
+      } finally {
+        setManagerLoading(false);
+      }
+    };
+
+    fetchGroups();
+  }, []);
+
+  // Sincronizar el dropdown de grupo cuando cambia el proveedor (source)
   useEffect(() => {
     if (catalog[source]?.groups.length > 0) {
       setGroupId(catalog[source].groups[0].uuid);
@@ -151,7 +191,6 @@ export default function SecurityHubPage() {
     }
   };
 
-  // Crear Grupo vía Backend (Obtiene UUID y lo guarda internamente)
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName) return;
@@ -167,7 +206,6 @@ export default function SecurityHubPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear el grupo en SCM');
 
-      // Actualizamos catálogo inyectando el grupo con su UUID interno
       setCatalog(prev => {
         const updated = { ...prev };
         updated[newGroupType].groups.push({ name: data.name, uuid: data.uuid });
@@ -182,7 +220,6 @@ export default function SecurityHubPage() {
     }
   };
 
-  // Eliminar Grupo vía Backend
   const handleDeleteGroup = async (groupUuid: string, groupType: ModelSource) => {
     setManagerLoading(true);
     try {
@@ -200,6 +237,11 @@ export default function SecurityHubPage() {
         updated[groupType].groups = updated[groupType].groups.filter(g => g.uuid !== groupUuid);
         return updated;
       });
+      
+      // Resetear dropdown si borramos el que teníamos seleccionado
+      if (groupId === groupUuid && catalog[groupType].groups.length > 0) {
+        setGroupId(catalog[groupType].groups[0].uuid);
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -237,14 +279,12 @@ export default function SecurityHubPage() {
           <p className="text-sm text-slate-400 mt-4">{t.subtitle}</p>
         </div>
 
-        {/* Botón de Gestión de Grupos */}
         <div className="flex justify-end mb-4">
           <button onClick={() => setShowManager(!showManager)} className="flex items-center gap-2 text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors text-cyan-400 shadow-sm">
             <Settings className="w-4 h-4" /> {t.manageBtn}
           </button>
         </div>
 
-        {/* Panel de Gestión (Sin referencia alguna a UUIDs) */}
         {showManager && (
           <div className="bg-[#111827] border border-cyan-900/50 rounded-xl p-5 mb-8 animate-in fade-in slide-in-from-top-2 shadow-lg">
             <h3 className="text-sm font-bold text-cyan-400 mb-4 border-b border-slate-800 pb-2">{t.createGroupTitle}</h3>
@@ -283,13 +323,13 @@ export default function SecurityHubPage() {
             </form>
 
             <div className="space-y-4">
-              {(Object.keys(catalog) as ModelSource[]).map(type => (
+              {managerLoading && <div className="text-xs text-cyan-500 animate-pulse">Sincronizando con SCM...</div>}
+              {!managerLoading && (Object.keys(catalog) as ModelSource[]).map(type => (
                 <div key={type}>
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">{type}</span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {catalog[type].groups.map(g => (
                       <div key={g.uuid} className="flex items-center justify-between bg-[#0a0f18] border border-slate-800 p-3 rounded-lg">
-                        {/* Se muestra únicamente el nombre asignado al grupo */}
                         <span className="text-xs font-bold text-slate-300 truncate">{g.name}</span>
                         <button 
                           onClick={() => handleDeleteGroup(g.uuid, type)} 
@@ -307,7 +347,6 @@ export default function SecurityHubPage() {
           </div>
         )}
 
-        {/* Formulario de Escaneo */}
         <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-7 shadow-2xl relative overflow-hidden mb-8">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-600 to-indigo-600 opacity-80"></div>
           
@@ -317,7 +356,7 @@ export default function SecurityHubPage() {
                  <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <Cloud className="w-3.5 h-3.5 text-cyan-600" /> {t.sourceLabel}
                  </label>
-                 <select value={source} onChange={(e) => setSource(e.target.value as ModelSource)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:border-cyan-500 outline-none appearance-none">
+                 <select value={source} onChange={(e) => setSource(e.target.value as ModelSource)} disabled={loading || managerLoading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:border-cyan-500 outline-none appearance-none">
                    {(Object.keys(catalog) as ModelSource[]).map(s => <option key={s} value={s}>{s}</option>)}
                  </select>
                </div>
@@ -325,8 +364,7 @@ export default function SecurityHubPage() {
                  <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> {t.groupLabel}
                  </label>
-                 {/* Muestra únicamente g.name en el dropdown, asociando el UUID al value en segundo plano */}
-                 <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-indigo-500 outline-none appearance-none">
+                 <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={loading || managerLoading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-indigo-500 outline-none appearance-none">
                    {catalog[source].groups.map(g => <option key={g.uuid} value={g.uuid}>{g.name}</option>)}
                  </select>
                </div>
@@ -355,7 +393,7 @@ export default function SecurityHubPage() {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 disabled:from-slate-800 text-white font-bold py-3.5 px-6 rounded-lg transition-all flex items-center justify-center gap-2 mt-4 shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:-translate-y-0.5">
+            <button type="submit" disabled={loading || managerLoading} className="w-full bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 disabled:from-slate-800 text-white font-bold py-3.5 px-6 rounded-lg transition-all flex items-center justify-center gap-2 mt-4 shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:-translate-y-0.5">
               {loading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Terminal className="w-4 h-4" />}
               {loading ? t.scanning : t.scanBtn}
             </button>
