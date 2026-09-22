@@ -217,7 +217,8 @@ export default function SecurityHubPage() {
                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <Key className="w-3.5 h-3.5 text-amber-500" /> {t.tokenLabel}
                 </label>
-                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} required className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="************************" />
+                {/* AHORA ES OPCIONAL. Sin el atributo 'required' */}
+                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="Opcional (Ej. si usas URL SAS)" />
               </div>
             )}
 
