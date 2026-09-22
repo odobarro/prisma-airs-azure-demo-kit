@@ -105,6 +105,9 @@ export default function SecurityHubPage() {
   const [newGroupType, setNewGroupType] = useState<ModelSource>('HuggingFace');
   const [managerLoading, setManagerLoading] = useState<boolean>(true); 
 
+  // AQUÍ ESTÁ LA LÍNEA RESTAURADA
+  const t = i18n[lang];
+
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -112,7 +115,6 @@ export default function SecurityHubPage() {
         if (res.ok) {
           const data = await res.json();
           
-          // FIX: Forzamos a TypeScript a entender que estos arrays vacíos son de tipo SecurityGroup[]
           const updatedCatalog: Record<string, SourceCatalogItem> = {
             HuggingFace: { ...INITIAL_CATALOG.HuggingFace, groups: [] as SecurityGroup[] },
             GitLab: { ...INITIAL_CATALOG.GitLab, groups: [] as SecurityGroup[] }
