@@ -5,16 +5,20 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# 1. Corrección de la importación principal de la clase
-from model_security_client import ModelSecurityAPIClient
+# Importación robusta compatible con diferentes versiones del SDK en el contenedor
+try:
+    from model_security_client import ModelSecurityAPIClient
+except ImportError:
+    try:
+        from model_security_client import ModelSecurityClient as ModelSecurityAPIClient
+    except ImportError:
+        ModelSecurityAPIClient = None
 
-# 2. Restauración de las excepciones específicas del SDK (vitales para que funcione el escaneo)
 from model_security_client.exceptions import (
     StorageAccessError,
     ModelSecurityError,
 )
 
-# Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("airs-backend")
 
@@ -24,26 +28,27 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# Carga de credenciales
 CLIENT_ID = os.getenv("MODEL_SECURITY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("MODEL_SECURITY_CLIENT_SECRET")
 TSG_ID = os.getenv("TSG_ID")
 
-# Inicialización diferida / Singleton del cliente de Palo Alto
-def get_security_client() -> ModelSecurityAPIClient:
+def get_security_client():
     if not CLIENT_ID or not CLIENT_SECRET or not TSG_ID:
         logger.error("[!] Error de configuración: Faltan credenciales de Prisma AIRS en el entorno.")
         raise HTTPException(
             status_code=500,
             detail="Credenciales de Prisma AIRS / SCM no configuradas en el servidor."
         )
+    if ModelSecurityAPIClient is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Error al cargar la librería model_security_client en la imagen."
+        )
     return ModelSecurityAPIClient(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         tsg_id=TSG_ID
     )
-
-# --- Modelos de Pydantic ---
 
 class ScanRequest(BaseModel):
     model_url: str
@@ -55,13 +60,14 @@ class GroupCreateRequest(BaseModel):
     name: str
     provider: str
 
-# --- Endpoints ---
-
+# Endpoints de Health Check para los Probes de Azure Container Apps
 @app.get("/")
+@app.get("/health")
 async def health_check():
     return {
         "status": "online",
-        "service": "Prisma AIRS Scanner Backend"
+        "service": "Prisma AIRS Scanner Backend",
+        "probes": "healthy"
     }
 
 @app.post("/api/v1/scan")
@@ -80,11 +86,9 @@ async def scan_endpoint(request: ScanRequest):
         if request.azure_token:
             scan_kwargs["azure_token"] = request.azure_token
 
-        # Llamada real al SDK de Prisma AIRS
         result = client.scan(**scan_kwargs)
         return result
 
-    # Restauramos el manejo de errores original para que no rompa el hilo principal
     except StorageAccessError as e:
         logger.error(f"[!] Error de acceso a almacenamiento: {str(e)}")
         raise HTTPException(
@@ -104,13 +108,10 @@ async def scan_endpoint(request: ScanRequest):
             detail=f"Internal Server Error: {str(e)}"
         )
 
-# --- Nuevos Endpoints de Gestión de Grupos ---
-
 @app.post("/api/v1/groups")
 async def create_group_endpoint(request: GroupCreateRequest):
     logger.info(f"[+] Creando nuevo Policy Group en SCM: {request.name} ({request.provider})")
     try:
-        # Aquí iría: new_group = client.create_group(...)
         generated_uuid = str(uuid.uuid4())
         return {
             "name": request.name,
@@ -129,7 +130,6 @@ async def create_group_endpoint(request: GroupCreateRequest):
 async def delete_group_endpoint(uuid: str):
     logger.info(f"[-] Eliminando Policy Group de SCM con UUID: {uuid}")
     try:
-        # Aquí iría: client.delete_group(uuid)
         return {
             "uuid": uuid,
             "status": "deleted"
