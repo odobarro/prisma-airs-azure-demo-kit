@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield, AlertTriangle, Database, Cloud, Key, FileInput, HelpCircle, ExternalLink } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Globe, Cpu, Terminal, Shield, AlertTriangle, Database, Cloud, Key, FileInput, HelpCircle, ExternalLink, Settings, Plus, Trash2 } from 'lucide-react';
 
 interface SecurityGroup {
   name: string;
@@ -14,7 +14,7 @@ interface SourceCatalogItem {
   presetToken?: string;
 }
 
-const SOURCES_CATALOG: Record<string, SourceCatalogItem> = {
+const INITIAL_CATALOG: Record<string, SourceCatalogItem> = {
   HuggingFace: {
     groups: [
       { name: 'HuggingFace_Scan', uuid: 'a6be1f6f-4d8e-4f78-9ebf-7339d1646bb0' },
@@ -31,7 +31,7 @@ const SOURCES_CATALOG: Record<string, SourceCatalogItem> = {
   }
 };
 
-type ModelSource = keyof typeof SOURCES_CATALOG;
+type ModelSource = 'HuggingFace' | 'GitLab';
 
 const i18n = {
   es: {
@@ -55,6 +55,10 @@ const i18n = {
     detailTh: 'Detalle Técnico & Archivo',
     remediationTitle: 'Recomendaciones de Remediación:',
     rawResponse: 'Telemetría de Inspección (Raw Payload)',
+    manageBtn: 'Gestionar Grupos de Políticas',
+    createGroupTitle: 'Crear Nuevo Grupo de Políticas en SCM',
+    groupNamePlaceholder: 'Ej. Grupo de Producción Estricto',
+    createBtn: 'Crear Grupo',
   },
   en: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
@@ -77,37 +81,48 @@ const i18n = {
     detailTh: 'Technical Detail & File',
     remediationTitle: 'Remediation Guidelines:',
     rawResponse: 'Inspection Telemetry (Raw Payload)',
+    manageBtn: 'Manage Policy Groups',
+    createGroupTitle: 'Create New Policy Group in SCM',
+    groupNamePlaceholder: 'Ex. Strict Production Group',
+    createBtn: 'Create Group',
   },
 };
 
 export default function SecurityHubPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es');
+  const [catalog, setCatalog] = useState<Record<string, SourceCatalogItem>>(INITIAL_CATALOG);
   const [source, setSource] = useState<ModelSource>('HuggingFace');
-  const [groupId, setGroupId] = useState<string>(SOURCES_CATALOG['HuggingFace'].groups[0].uuid);
+  const [groupId, setGroupId] = useState<string>(INITIAL_CATALOG['HuggingFace'].groups[0].uuid);
   const [modelUrl, setModelUrl] = useState<string>('');
-  
   const [privateToken, setPrivateToken] = useState<string>('');
   
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Estados para la gestión dinámica de grupos (Sin exponer UUID al usuario)
+  const [showManager, setShowManager] = useState<boolean>(false);
+  const [newGroupName, setNewGroupName] = useState<string>('');
+  const [newGroupType, setNewGroupType] = useState<ModelSource>('HuggingFace');
+  const [managerLoading, setManagerLoading] = useState<boolean>(false);
+
   const t = i18n[lang];
 
   useEffect(() => {
-    setGroupId(SOURCES_CATALOG[source].groups[0].uuid);
+    if (catalog[source]?.groups.length > 0) {
+      setGroupId(catalog[source].groups[0].uuid);
+    } else {
+      setGroupId('');
+    }
     setModelUrl('');
     setPrivateToken('');
-  }, [source]);
+  }, [source, catalog]);
 
   const handleLoadPreset = () => {
-    const catalogItem = SOURCES_CATALOG[source];
+    const catalogItem = catalog[source];
     setModelUrl(catalogItem.presetUrl);
-    if (catalogItem.presetToken) {
-      setPrivateToken(catalogItem.presetToken);
-    } else {
-      setPrivateToken('');
-    }
+    if (catalogItem.presetToken) setPrivateToken(catalogItem.presetToken);
+    else setPrivateToken('');
   };
 
   const handleScan = async (e: React.FormEvent) => {
@@ -118,7 +133,6 @@ export default function SecurityHubPage() {
 
     try {
       const payload: Record<string, any> = { model_url: modelUrl, group_id: groupId };
-      
       if (source === 'GitLab' && privateToken) payload.gitlab_token = privateToken;
 
       const res = await fetch('/api/scan', {
@@ -134,6 +148,62 @@ export default function SecurityHubPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Crear Grupo vía Backend (Obtiene UUID y lo guarda internamente)
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName) return;
+    setManagerLoading(true);
+
+    try {
+      const res = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newGroupName, provider: newGroupType }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al crear el grupo en SCM');
+
+      // Actualizamos catálogo inyectando el grupo con su UUID interno
+      setCatalog(prev => {
+        const updated = { ...prev };
+        updated[newGroupType].groups.push({ name: data.name, uuid: data.uuid });
+        return updated;
+      });
+
+      setNewGroupName('');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setManagerLoading(false);
+    }
+  };
+
+  // Eliminar Grupo vía Backend
+  const handleDeleteGroup = async (groupUuid: string, groupType: ModelSource) => {
+    setManagerLoading(true);
+    try {
+      const res = await fetch(`/api/groups?uuid=${encodeURIComponent(groupUuid)}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Error al eliminar el grupo en SCM');
+      }
+
+      setCatalog(prev => {
+        const updated = { ...prev };
+        updated[groupType].groups = updated[groupType].groups.filter(g => g.uuid !== groupUuid);
+        return updated;
+      });
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setManagerLoading(false);
     }
   };
 
@@ -167,6 +237,77 @@ export default function SecurityHubPage() {
           <p className="text-sm text-slate-400 mt-4">{t.subtitle}</p>
         </div>
 
+        {/* Botón de Gestión de Grupos */}
+        <div className="flex justify-end mb-4">
+          <button onClick={() => setShowManager(!showManager)} className="flex items-center gap-2 text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors text-cyan-400 shadow-sm">
+            <Settings className="w-4 h-4" /> {t.manageBtn}
+          </button>
+        </div>
+
+        {/* Panel de Gestión (Sin referencia alguna a UUIDs) */}
+        {showManager && (
+          <div className="bg-[#111827] border border-cyan-900/50 rounded-xl p-5 mb-8 animate-in fade-in slide-in-from-top-2 shadow-lg">
+            <h3 className="text-sm font-bold text-cyan-400 mb-4 border-b border-slate-800 pb-2">{t.createGroupTitle}</h3>
+            
+            <form onSubmit={handleCreateGroup} className="flex flex-col md:flex-row items-end gap-4 mb-6">
+              <div className="flex-1 w-full">
+                <label className="block text-[10px] uppercase text-slate-500 mb-1">Nombre del Grupo</label>
+                <input 
+                  type="text" 
+                  value={newGroupName} 
+                  onChange={e => setNewGroupName(e.target.value)} 
+                  disabled={managerLoading}
+                  className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-cyan-500 text-slate-200" 
+                  placeholder={t.groupNamePlaceholder} 
+                />
+              </div>
+              <div className="w-full md:w-48">
+                <label className="block text-[10px] uppercase text-slate-500 mb-1">Proveedor</label>
+                <select 
+                  value={newGroupType} 
+                  onChange={e => setNewGroupType(e.target.value as ModelSource)} 
+                  disabled={managerLoading}
+                  className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none text-slate-300"
+                >
+                  <option value="HuggingFace">HuggingFace</option>
+                  <option value="GitLab">GitLab</option>
+                </select>
+              </div>
+              <button 
+                type="submit" 
+                disabled={managerLoading || !newGroupName} 
+                className="w-full md:w-auto bg-cyan-900 hover:bg-cyan-800 text-cyan-100 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 border border-cyan-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" /> {t.createBtn}
+              </button>
+            </form>
+
+            <div className="space-y-4">
+              {(Object.keys(catalog) as ModelSource[]).map(type => (
+                <div key={type}>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">{type}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {catalog[type].groups.map(g => (
+                      <div key={g.uuid} className="flex items-center justify-between bg-[#0a0f18] border border-slate-800 p-3 rounded-lg">
+                        {/* Se muestra únicamente el nombre asignado al grupo */}
+                        <span className="text-xs font-bold text-slate-300 truncate">{g.name}</span>
+                        <button 
+                          onClick={() => handleDeleteGroup(g.uuid, type)} 
+                          disabled={managerLoading}
+                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded transition-colors ml-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Formulario de Escaneo */}
         <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-7 shadow-2xl relative overflow-hidden mb-8">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-600 to-indigo-600 opacity-80"></div>
           
@@ -177,15 +318,16 @@ export default function SecurityHubPage() {
                    <Cloud className="w-3.5 h-3.5 text-cyan-600" /> {t.sourceLabel}
                  </label>
                  <select value={source} onChange={(e) => setSource(e.target.value as ModelSource)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-cyan-300 focus:border-cyan-500 outline-none appearance-none">
-                   {(Object.keys(SOURCES_CATALOG) as ModelSource[]).map(s => <option key={s} value={s}>{s}</option>)}
+                   {(Object.keys(catalog) as ModelSource[]).map(s => <option key={s} value={s}>{s}</option>)}
                  </select>
                </div>
                <div>
                  <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> {t.groupLabel}
                  </label>
+                 {/* Muestra únicamente g.name en el dropdown, asociando el UUID al value en segundo plano */}
                  <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-indigo-500 outline-none appearance-none">
-                   {SOURCES_CATALOG[source].groups.map(g => <option key={g.uuid} value={g.uuid}>{g.name}</option>)}
+                   {catalog[source].groups.map(g => <option key={g.uuid} value={g.uuid}>{g.name}</option>)}
                  </select>
                </div>
             </div>
@@ -195,7 +337,7 @@ export default function SecurityHubPage() {
                  <label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
                     <Database className="w-3.5 h-3.5 text-slate-500" /> {t.modelUrlLabel}
                  </label>
-                 {SOURCES_CATALOG[source].presetUrl && (
+                 {catalog[source].presetUrl && (
                    <button type="button" onClick={handleLoadPreset} className="text-[10px] flex items-center gap-1 bg-cyan-950/50 text-cyan-400 hover:bg-cyan-900 border border-cyan-800/50 px-2 py-1 rounded transition-colors">
                       <FileInput className="w-3 h-3" /> {t.loadPreset}
                    </button>
