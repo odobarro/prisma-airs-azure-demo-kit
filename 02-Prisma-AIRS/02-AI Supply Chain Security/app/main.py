@@ -5,7 +5,6 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Importación oficial del SDK de Palo Alto Networks (Prisma AIRS)
 from model_security_client.api import ModelSecurityAPIClient
 
 logging.basicConfig(level=logging.INFO)
@@ -18,15 +17,9 @@ app = FastAPI(
 )
 
 def get_security_client() -> ModelSecurityAPIClient:
-    """
-    Instancia el cliente oficial. El SDK lee las credenciales automáticamente 
-    de las variables de entorno de Azure, pero EXIGE el base_url.
-    """
     return ModelSecurityAPIClient(
         base_url="https://api.sase.paloaltonetworks.com/aims"
     )
-
-# --- Modelos de Pydantic ---
 
 class ScanRequest(BaseModel):
     model_url: str
@@ -37,35 +30,27 @@ class GroupCreateRequest(BaseModel):
     name: str
     provider: str
 
-# --- Endpoints ---
-
 @app.get("/")
 @app.get("/health")
 async def health_check():
-    return {
-        "status": "online",
-        "service": "Prisma AIRS Scanner Backend"
-    }
+    return {"status": "online", "service": "Prisma AIRS Scanner Backend"}
 
 @app.post("/api/v1/scan")
 async def scan_endpoint(request: ScanRequest):
     logger.info(f"[+] Starting Prisma AIRS scan for URI: {request.model_url}")
     
+    # 1. El SDK espera leer el token directamente del entorno del sistema
+    if request.gitlab_token:
+        os.environ["GITLAB_TOKEN"] = request.gitlab_token
+        
     try:
         client = get_security_client()
         
-        # Mapeo exacto a la firma que exige el SDK de Palo Alto
-        scan_kwargs = {
-            "model_uri": request.model_url,
-            "security_group_uuid": uuid.UUID(request.group_id)
-        }
-        
-        # Prisma AIRS consolida la autenticación de repositorios en el parámetro 'token'
-        if request.gitlab_token:
-            scan_kwargs["token"] = request.gitlab_token
-
-        # Llamada oficial al motor
-        result = client.scan(**scan_kwargs)
+        # 2. Firma exacta: model_uri y security_group_uuid (como string)
+        result = client.scan(
+            model_uri=request.model_url,
+            security_group_uuid=request.group_id
+        )
         return result
 
     except Exception as e:
@@ -74,6 +59,10 @@ async def scan_endpoint(request: ScanRequest):
             status_code=500,
             detail=f"Error en la evaluación de políticas de SCM: {str(e)}"
         )
+    finally:
+        # 3. Limpieza de memoria (Zero-Trust) para no dejar el PAT expuesto en el contenedor
+        if request.gitlab_token and "GITLAB_TOKEN" in os.environ:
+            del os.environ["GITLAB_TOKEN"]
 
 @app.post("/api/v1/groups")
 async def create_group_endpoint(request: GroupCreateRequest):
