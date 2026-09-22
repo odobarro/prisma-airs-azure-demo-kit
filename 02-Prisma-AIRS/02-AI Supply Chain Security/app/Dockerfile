@@ -6,8 +6,9 @@ WORKDIR /app
 
 ARG PYPI_URL
 
+# Inclusión explícita del extra [azure] para habilitar AzureDownloader en el SDK
 RUN uv pip install --system --no-cache fastapi uvicorn \
-    "model-security-client==1.1.0" --extra-index-url "$PYPI_URL"
+    "model-security-client[azure]==1.1.0" --extra-index-url "$PYPI_URL"
 
 COPY main.py /app/main.py
 
