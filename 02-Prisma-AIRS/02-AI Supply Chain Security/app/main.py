@@ -32,7 +32,6 @@ class ScanRequest(BaseModel):
     model_url: str
     group_id: str
     gitlab_token: Optional[str] = None
-    azure_token: Optional[str] = None
 
 class GroupCreateRequest(BaseModel):
     name: str
@@ -55,16 +54,15 @@ async def scan_endpoint(request: ScanRequest):
     try:
         client = get_security_client()
         
-        # CRÍTICO: Mapeo exacto a la firma que exige el SDK de Palo Alto
+        # Mapeo exacto a la firma que exige el SDK de Palo Alto
         scan_kwargs = {
             "model_uri": request.model_url,
-            "security_group_uuid": uuid.UUID(request.group_id) # Debe ser objeto UUID
+            "security_group_uuid": uuid.UUID(request.group_id)
         }
         
+        # Prisma AIRS consolida la autenticación de repositorios en el parámetro 'token'
         if request.gitlab_token:
-            scan_kwargs["gitlab_token"] = request.gitlab_token
-        if request.azure_token:
-            scan_kwargs["azure_token"] = request.azure_token
+            scan_kwargs["token"] = request.gitlab_token
 
         # Llamada oficial al motor
         result = client.scan(**scan_kwargs)
