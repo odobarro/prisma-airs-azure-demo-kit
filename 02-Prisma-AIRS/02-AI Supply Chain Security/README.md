@@ -1,7 +1,3 @@
-> [!WARNING]
-> **MODULE UNDER CONSTRUCTION / WORK IN PROGRESS**  
-> This module is currently under active development and testing. Architecture specs, Terraform definitions, and CI/CD pipelines are subject to frequent updates. **Do not deploy in production environments yet.**
-
 # Module 02: AI Supply Chain Security (Model Security in Prisma AIRS)
 
 ## What is AI Supply Chain Security?
