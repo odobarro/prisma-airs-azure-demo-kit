@@ -271,11 +271,11 @@ az containerapp update \
 Send a scan request for an AI model (e.g., Hugging Face `Phi-3-mini` GGUF) targeting your API endpoint:
 
 ```bash
-curl -X POST "[https://od-airs-scanner-api.mangosand-1ebd5c48.spaincentral.azurecontainerapps.io/api/v1/scan](https://od-airs-scanner-api.mangosand-1ebd5c48.spaincentral.azurecontainerapps.io/api/v1/scan)" \
+curl -X POST "https://od-airs-scanner-api.mangosand-1ebd5c48.spaincentral.azurecontainerapps.io/api/v1/scan" \
   -H "Content-Type: application/json" \
   -H "x-api-key: <YOUR_INTERNAL_API_KEY>" \
   -d '{
-    "model_url": "[https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf)",
+    "model_url": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf",
     "group_id": "<YOUR_SCM_GROUP_ID_UUID>"
   }'
 ```
@@ -288,6 +288,17 @@ curl -X POST "[https://od-airs-scanner-api.mangosand-1ebd5c48.spaincentral.azure
 1. Log in to **Strata Cloud Manager**.
 2. Navigate to **AI Security > Prisma AIRS > Model Security > Scans**.
 3. Verify that the scan execution log appears associated with your `group_id` UUID, displaying vulnerability analysis, license evaluation, and threat posture.
+
+---
+
+
+## 🚀 Step 5: Next Steps & SecOps Web Interface
+
+While you can interact with the Prisma AIRS scanning backend via standard APIs (as tested above), we have developed a dedicated, Zero-Trust **SecOps Web Interface (Model Validation Hub)** for security operations teams. 
+
+This Next.js portal provides a visual dashboard to trigger audits, inspect results, and dynamically manage SCM Policy Groups without interacting directly with the backend infrastructure.
+
+👉 **[Deploy the SecOps Model Validation Hub](../../03-AI-Apps/02-Service-Apps/README.md)**
 
 ---
 
@@ -305,3 +316,4 @@ Model & Skill Supply Chain Security represents the **Pre-Deployment / Static Gua
 * **Prisma AIRS (Supply Chain Security)**: Validates AI artifacts (GGUF, Safetensors, Pickle, Skill definitions) before they enter CI/CD pipelines or AI registries.
 * **Prisma AIRS AI Gateway & Runtime Security**: Intercepts real-time LLM inference requests, enforcing DLP, prompt injection defense, and toxicity filtering.
 * **Portkey & Idira Integration**: Works alongside AI gateways and orchestration proxies to provide end-to-end observability, fallback routing, and real-time governance across multi-LLM enterprise deployments.
+
