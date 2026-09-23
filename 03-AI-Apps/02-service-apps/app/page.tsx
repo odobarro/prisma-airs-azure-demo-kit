@@ -14,7 +14,6 @@ interface SourceCatalogItem {
   presetToken?: string;
 }
 
-// El catálogo nace limpio sin UUIDs a fuego.
 const INITIAL_CATALOG: Record<string, SourceCatalogItem> = {
   HuggingFace: {
     groups: [],
@@ -38,6 +37,7 @@ const i18n = {
     groupLabel: 'Security Policy Group (SCM)',
     modelUrlLabel: 'URL del Artefacto o Repositorio',
     tokenLabel: 'Token de Acceso (GitLab PAT)',
+    tokenPlaceholder: 'Opcional (Ej. glpat-XXXX...)',
     loadPreset: 'Cargar Modelo de Ejemplo',
     scanBtn: 'Auditar Artefacto / Modelo',
     scanning: 'Ejecutando motor de escaneo en Prisma AIRS...',
@@ -54,7 +54,12 @@ const i18n = {
     manageBtn: 'Gestionar Grupos de Políticas',
     createGroupTitle: 'Crear Nuevo Grupo de Políticas en SCM',
     groupNamePlaceholder: 'Ej. Grupo de Producción Estricto',
+    groupNameLabel: 'Nombre del Grupo',
+    providerLabel: 'Proveedor',
     createBtn: 'Crear Grupo',
+    syncing: 'Sincronizando con SCM...',
+    noGroups: 'No hay grupos configurados.',
+    createGroupFirst: '-- Crea un grupo primero --'
   },
   en: {
     badge: 'PRISMA AIRS • AI SUPPLY CHAIN SECURITY',
@@ -64,6 +69,7 @@ const i18n = {
     groupLabel: 'Security Policy Group (SCM)',
     modelUrlLabel: 'Artifact or Repository URL',
     tokenLabel: 'Access Token (GitLab PAT)',
+    tokenPlaceholder: 'Optional (Ex. glpat-XXXX...)',
     loadPreset: 'Load Preset Example',
     scanBtn: 'Audit Artifact / Model',
     scanning: 'Running scan engine in Prisma AIRS...',
@@ -80,7 +86,12 @@ const i18n = {
     manageBtn: 'Manage Policy Groups',
     createGroupTitle: 'Create New Policy Group in SCM',
     groupNamePlaceholder: 'Ex. Strict Production Group',
+    groupNameLabel: 'Group Name',
+    providerLabel: 'Provider',
     createBtn: 'Create Group',
+    syncing: 'Synchronizing with SCM...',
+    noGroups: 'No groups configured.',
+    createGroupFirst: '-- Create a group first --'
   },
 };
 
@@ -103,7 +114,6 @@ export default function SecurityHubPage() {
 
   const t = i18n[lang];
 
-  // 1. FILTRADO ESTRICTO DE SOURCE TYPES DESDE SCM
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -121,7 +131,6 @@ export default function SecurityHubPage() {
                 const item = { name: g.name, uuid: g.uuid };
                 const prov = String(g.provider || '').toUpperCase();
                 
-                // Mapeo exclusivo: Si no es GitLab ni HuggingFace, se ignora (GCS, S3, Azure, Local)
                 if (prov.includes('GITLAB')) {
                   glGroups.push(item);
                 } else if (prov.includes('HUGGING')) {
@@ -146,7 +155,6 @@ export default function SecurityHubPage() {
     fetchGroups();
   }, []);
 
-  // 2. SELECCIÓN AUTOMÁTICA DEL DROPDOWN
   useEffect(() => {
     const currentGroups = catalog[source]?.groups || [];
     if (currentGroups.length > 0) {
@@ -191,7 +199,6 @@ export default function SecurityHubPage() {
     }
   };
 
-  // 3. CREACIÓN DIRECTA AL BUCKET CORRECTO
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName) return;
@@ -201,13 +208,12 @@ export default function SecurityHubPage() {
       const res = await fetch('/api/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newGroupName, provider: newGroupType }), // newGroupType solo puede ser 'HuggingFace' o 'GitLab'
+        body: JSON.stringify({ name: newGroupName, provider: newGroupType }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear el grupo en SCM');
 
-      // Se inyecta visualmente al instante en la categoría correcta del frontend
       setCatalog(prev => {
         const updated = { ...prev };
         updated[newGroupType].groups.push({ name: data.name, uuid: data.uuid });
@@ -289,7 +295,7 @@ export default function SecurityHubPage() {
             
             <form onSubmit={handleCreateGroup} className="flex flex-col md:flex-row items-end gap-4 mb-6">
               <div className="flex-1 w-full">
-                <label className="block text-[10px] uppercase text-slate-500 mb-1">Nombre del Grupo</label>
+                <label className="block text-[10px] uppercase text-slate-500 mb-1">{t.groupNameLabel}</label>
                 <input 
                   type="text" 
                   value={newGroupName} 
@@ -300,7 +306,7 @@ export default function SecurityHubPage() {
                 />
               </div>
               <div className="w-full md:w-48">
-                <label className="block text-[10px] uppercase text-slate-500 mb-1">Proveedor</label>
+                <label className="block text-[10px] uppercase text-slate-500 mb-1">{t.providerLabel}</label>
                 <select 
                   value={newGroupType} 
                   onChange={e => setNewGroupType(e.target.value as ModelSource)} 
@@ -321,12 +327,12 @@ export default function SecurityHubPage() {
             </form>
 
             <div className="space-y-4">
-              {managerLoading && <div className="text-xs text-cyan-500 animate-pulse">Sincronizando con SCM...</div>}
+              {managerLoading && <div className="text-xs text-cyan-500 animate-pulse">{t.syncing}</div>}
               {!managerLoading && (Object.keys(catalog) as ModelSource[]).map(type => (
                 <div key={type} className="mb-4 last:mb-0">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">{type}</span>
                   {catalog[type].groups.length === 0 ? (
-                    <div className="text-xs text-slate-600 italic px-2">No hay grupos configurados.</div>
+                    <div className="text-xs text-slate-600 italic px-2">{t.noGroups}</div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {catalog[type].groups.map(g => (
@@ -368,7 +374,7 @@ export default function SecurityHubPage() {
                  </label>
                  <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={loading || managerLoading || catalog[source]?.groups.length === 0} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-indigo-500 outline-none appearance-none">
                    {catalog[source]?.groups.length === 0 ? (
-                     <option value="">-- Crea un grupo primero --</option>
+                     <option value="">{t.createGroupFirst}</option>
                    ) : (
                      catalog[source].groups.map(g => <option key={g.uuid} value={g.uuid}>{g.name}</option>)
                    )}
@@ -395,7 +401,7 @@ export default function SecurityHubPage() {
                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <Key className="w-3.5 h-3.5 text-amber-500" /> {t.tokenLabel}
                 </label>
-                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder="Opcional (Ej. glpat-XXXX...)" />
+                <input type="password" value={privateToken} onChange={(e) => setPrivateToken(e.target.value)} disabled={loading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-amber-300/80 focus:border-amber-500 outline-none" placeholder={t.tokenPlaceholder} />
               </div>
             )}
 
