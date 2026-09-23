@@ -11,6 +11,53 @@ Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilities 
 * **Azure OpenAI Service**: Deploys `gpt-4.1-mini`.
 * **Azure Storage Account (`Standard_LRS`)**: Dedicated Blob Storage container for AI model vulnerability scanning (`.pkl`, `.safetensors`, `.onnx` files) via **Prisma Model Security**.
 
+```mermaid
+graph LR
+    %% Styling Definitions (Palo Alto, Azure, and Vercel Colors)
+    classDef frontend fill:#111827,stroke:#374151,stroke-width:2px,color:#fff;
+    classDef prisma fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#fff;
+    classDef azure fill:#0078D4,stroke:#005A9E,stroke-width:2px,color:#fff;
+    classDef external fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
+
+    subgraph Consumption_Layer ["1. Vercel - Edge Applications"]
+        R["Retail Web App"]:::frontend
+        F["Finance Web App"]:::frontend
+        M["Manufacturing Web App"]:::frontend
+        S["SecOps AI Supply Chain Security"]:::frontend
+    end
+
+    subgraph Security_Layer ["2. Palo Alto Networks - Prisma AIRS"]
+        GW{"AI Gateway"}:::prisma
+        RT["Runtime API (Guardrails)"]:::prisma
+        RED["AI Red Teaming Module"]:::prisma
+        SCM[("Strata Cloud Manager")]:::prisma
+    end
+
+    subgraph Infrastructure_Layer ["3. Azure - Backend & AI Platform"]
+        OAI["Azure OpenAI <br/> gpt-4.1-mini"]:::azure
+        ACA["Azure Container Apps <br/> Model Scanner API"]:::azure
+    end
+
+    subgraph Supply_Chain ["4. External Repositories"]
+        HF(("Hugging Face")):::external
+        GL(("GitLab")):::external
+    end
+
+    %% Runtime Security & Red Teaming Flows
+    R -->|"Inference"| GW
+    F -->|"Inference"| GW
+    M -->|"Inference"| GW
+    RED -.->|"Attacks / Payloads"| GW
+    
+    GW <-->|"Runtime Security"| RT
+    GW -->|"Clean Traffic"| OAI
+
+    %% SecOps (Model Security) Flows
+    S -->|"Backend Connection"| ACA
+    ACA <-->|"Policy Management & Telemetry"| SCM
+    ACA -->|"Model Inspection"| HF
+    ACA -->|"Model Inspection"| GL
+```
 
 ---
 
@@ -54,52 +101,3 @@ Before running this deployment, ensure you have:
 6. **Active Azure Subscription**: Permissions to create Resource Groups, Cognitive Services, and Storage Accounts.
 7. **Palo Alto Networks FlexCredits**: Active **FlexCredits** allocated in your Customer Service Portal (CSP) / Strata Cloud Manager (SCM) tenant to enable and consume Prisma AIRS modules (AI Gateway, AI Runtime Security, Model Security, etc.).
 8. **Vercel Account (Free/Hobby Tier)**: Required to deploy the Next.js frontend demo applications (Phase 3). Vercel's Edge infrastructure acts as the serverless host for our UI, securely proxying traffic to the Prisma AIRS Gateway without incurring additional cloud compute costs.
-
-
-```mermaid
-graph LR
-    %% Definición de Estilos (Colores Palo Alto, Azure y Vercel)
-    classDef frontend fill:#111827,stroke:#374151,stroke-width:2px,color:#fff;
-    classDef prisma fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#fff;
-    classDef azure fill:#0078D4,stroke:#005A9E,stroke-width:2px,color:#fff;
-    classDef external fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
-
-    subgraph Capa_Consumo ["1. Vercel - Edge Applications"]
-        R["Retail Web App"]:::frontend
-        F["Finance Web App"]:::frontend
-        M["Manufacturing Web App"]:::frontend
-        S["SecOps Validation Hub"]:::frontend
-    end
-
-    subgraph Capa_Seguridad ["2. Palo Alto Networks - Prisma AIRS"]
-        GW{"AI Gateway"}:::prisma
-        RT["Runtime API (Guardrails)"]:::prisma
-        RED["AI Red Teaming Module"]:::prisma
-        SCM[("Strata Cloud Manager")]:::prisma
-    end
-
-    subgraph Capa_Infraestructura ["3. Azure - Backend & AI Platform"]
-        OAI["Azure OpenAI <br/> gpt-4.1-mini"]:::azure
-        ACA["Azure Container Apps <br/> Model Scanner API"]:::azure
-    end
-
-    subgraph Cadena_Suministro ["4. External Repositories"]
-        HF(("Hugging Face")):::external
-        GL(("GitLab")):::external
-    end
-
-    %% Flujos de Runtime Security & Red Teaming
-    R -->|"Inferencia"| GW
-    F -->|"Inferencia"| GW
-    M -->|"Inferencia"| GW
-    RED -.->|"Ataques / Payloads"| GW
-    
-    GW <-->|"Evaluación DLP / Riesgos"| RT
-    GW -->|"Tráfico Limpio"| OAI
-
-    %% Flujos de SecOps (Model Security)
-    S -->|"Llamada Zero-Trust"| ACA
-    ACA <-->|"Gestión Políticas y Telemetría"| SCM
-    ACA -->|"Inspección de Artefactos"| HF
-    ACA -->|"Inspección de Artefactos"| GL
-```
