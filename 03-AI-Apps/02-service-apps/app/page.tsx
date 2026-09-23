@@ -14,7 +14,7 @@ interface SourceCatalogItem {
   presetToken?: string;
 }
 
-// 1. ELIMINADOS LOS UUIDs HARDCODEADOS. El frontend nace limpio.
+// El catálogo nace limpio sin UUIDs a fuego.
 const INITIAL_CATALOG: Record<string, SourceCatalogItem> = {
   HuggingFace: {
     groups: [],
@@ -103,11 +103,10 @@ export default function SecurityHubPage() {
 
   const t = i18n[lang];
 
-  // 2. SINCRONIZACIÓN DINÁMICA (Busting de Caché en Vercel)
+  // 1. FILTRADO ESTRICTO DE SOURCE TYPES DESDE SCM
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        // El timestamp (?t=...) fuerza a Vercel a ignorar su caché y pedir datos frescos a Azure
         const res = await fetch(`/api/groups?t=${new Date().getTime()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
@@ -118,18 +117,18 @@ export default function SecurityHubPage() {
               const hfGroups: SecurityGroup[] = [];
               const glGroups: SecurityGroup[] = [];
 
-              // Clasificamos lo que viene de la nube
               data.forEach((g: any) => {
                 const item = { name: g.name, uuid: g.uuid };
                 const prov = String(g.provider || '').toUpperCase();
+                
+                // Mapeo exclusivo: Si no es GitLab ni HuggingFace, se ignora (GCS, S3, Azure, Local)
                 if (prov.includes('GITLAB')) {
                   glGroups.push(item);
-                } else {
-                  hfGroups.push(item); // S3 o HUGGING_FACE caen aquí
+                } else if (prov.includes('HUGGING')) {
+                  hfGroups.push(item);
                 }
               });
 
-              // Asignamos directamente los arrays (aunque vengan vacíos, es la realidad de SCM)
               updated.HuggingFace.groups = hfGroups;
               updated.GitLab.groups = glGroups;
 
@@ -147,11 +146,10 @@ export default function SecurityHubPage() {
     fetchGroups();
   }, []);
 
-  // 3. SELECCIÓN INTELIGENTE DEL DROPDOWN
+  // 2. SELECCIÓN AUTOMÁTICA DEL DROPDOWN
   useEffect(() => {
     const currentGroups = catalog[source]?.groups || [];
     if (currentGroups.length > 0) {
-      // Si el ID actual no existe en la lista de este proveedor, seleccionamos el primero
       if (!currentGroups.find(g => g.uuid === groupId)) {
         setGroupId(currentGroups[0].uuid);
       }
@@ -193,6 +191,7 @@ export default function SecurityHubPage() {
     }
   };
 
+  // 3. CREACIÓN DIRECTA AL BUCKET CORRECTO
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName) return;
@@ -202,12 +201,13 @@ export default function SecurityHubPage() {
       const res = await fetch('/api/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newGroupName, provider: newGroupType }),
+        body: JSON.stringify({ name: newGroupName, provider: newGroupType }), // newGroupType solo puede ser 'HuggingFace' o 'GitLab'
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear el grupo en SCM');
 
+      // Se inyecta visualmente al instante en la categoría correcta del frontend
       setCatalog(prev => {
         const updated = { ...prev };
         updated[newGroupType].groups.push({ name: data.name, uuid: data.uuid });
