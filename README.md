@@ -55,47 +55,51 @@ Before running this deployment, ensure you have:
 7. **Palo Alto Networks FlexCredits**: Active **FlexCredits** allocated in your Customer Service Portal (CSP) / Strata Cloud Manager (SCM) tenant to enable and consume Prisma AIRS modules (AI Gateway, AI Runtime Security, Model Security, etc.).
 8. **Vercel Account (Free/Hobby Tier)**: Required to deploy the Next.js frontend demo applications (Phase 3). Vercel's Edge infrastructure acts as the serverless host for our UI, securely proxying traffic to the Prisma AIRS Gateway without incurring additional cloud compute costs.
 
----
 
-
+```mermaid
 graph LR
-    %% Definición de Estilos
-    classDef frontend fill:#000000,stroke:#fff,stroke-width:1px,color:#fff;
-    classDef prisma fill:#05a6f0,stroke:#005279,stroke-width:2px,color:#fff;
+    %% Definición de Estilos (Colores Palo Alto, Azure y Vercel)
+    classDef frontend fill:#111827,stroke:#374151,stroke-width:2px,color:#fff;
+    classDef prisma fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#fff;
     classDef azure fill:#0078D4,stroke:#005A9E,stroke-width:2px,color:#fff;
-    classDef external fill:#fca311,stroke:#e5e5e5,stroke-width:1px,color:#000;
+    classDef external fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
 
-    subgraph Capa_Consumo [1. Vercel - Capa de Aplicación / Edge]
-        R[Retail Web App]:::frontend
-        F[Finance Web App]:::frontend
-        M[Manufacturing Web App]:::frontend
-        S[SecOps Validation Hub]:::frontend
+    subgraph Capa_Consumo ["1. Vercel - Edge Applications"]
+        R["Retail Web App"]:::frontend
+        F["Finance Web App"]:::frontend
+        M["Manufacturing Web App"]:::frontend
+        S["SecOps Validation Hub"]:::frontend
     end
 
-    subgraph Capa_Seguridad [2. Palo Alto Networks - Prisma AIRS]
-        GW{AI Gateway}:::prisma
-        RT[Runtime API / Guardrails]:::prisma
-        RED[AI Red Teaming Module]:::prisma
-        SCM[(Strata Cloud Manager)]:::prisma
+    subgraph Capa_Seguridad ["2. Palo Alto Networks - Prisma AIRS"]
+        GW{"AI Gateway"}:::prisma
+        RT["Runtime API (Guardrails)"]:::prisma
+        RED["AI Red Teaming Module"]:::prisma
+        SCM[("Strata Cloud Manager")]:::prisma
     end
 
-    subgraph Capa_Infraestructura [3. Azure - Backend & AI Platform]
-        OAI[Azure OpenAI \n gpt-4.1-mini]:::azure
-        ACA[Azure Container Apps \n Model Scanner API]:::azure
+    subgraph Capa_Infraestructura ["3. Azure - Backend & AI Platform"]
+        OAI["Azure OpenAI <br/> gpt-4.1-mini"]:::azure
+        ACA["Azure Container Apps <br/> Model Scanner API"]:::azure
     end
 
-    subgraph Cadena_Suministro [4. Repositorios Externos]
-        HF((Hugging Face)):::external
-        GL((GitLab)):::external
+    subgraph Cadena_Suministro ["4. External Repositories"]
+        HF(("Hugging Face")):::external
+        GL(("GitLab")):::external
     end
 
     %% Flujos de Runtime Security & Red Teaming
-    R & F & M -- "Inferencia (Prompts)" --> GW
-    RED -. "Ataques y Payloads" .-> GW
-    GW <-->|Evaluación de Riesgo / DLP| RT
-    GW -- "Tráfico Limpio" --> OAI
+    R -->|"Inferencia"| GW
+    F -->|"Inferencia"| GW
+    M -->|"Inferencia"| GW
+    RED -.->|"Ataques / Payloads"| GW
+    
+    GW <-->|"Evaluación DLP / Riesgos"| RT
+    GW -->|"Tráfico Limpio"| OAI
 
     %% Flujos de SecOps (Model Security)
-    S -- "Llamada Zero-Trust" --> ACA
-    ACA <-->|Gestión de Grupos y Políticas| SCM
-    ACA -- "Inspección de Artefactos" --> HF & GL
+    S -->|"Llamada Zero-Trust"| ACA
+    ACA <-->|"Gestión Políticas y Telemetría"| SCM
+    ACA -->|"Inspección de Artefactos"| HF
+    ACA -->|"Inspección de Artefactos"| GL
+```
