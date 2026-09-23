@@ -30,12 +30,13 @@ graph LR
         GW{"AI Gateway"}:::prisma
         RT["Runtime API (Guardrails)"]:::prisma
         RED["AI Red Teaming Module"]:::prisma
+        MS["Model Security Engine"]:::prisma
         SCM[("Strata Cloud Manager")]:::prisma
     end
 
     subgraph Infrastructure_Layer ["3. Azure - Backend & AI Platform"]
         OAI["Azure OpenAI <br/> gpt-4.1-mini"]:::azure
-        ACA["Azure Container Apps <br/> Model Scanner API"]:::azure
+        ACA["Azure Container Apps <br/> API Proxy"]:::azure
     end
 
     subgraph Supply_Chain ["4. External Repositories"]
@@ -54,9 +55,12 @@ graph LR
 
     %% SecOps (Model Security) Flows
     S -->|"Backend Connection"| ACA
-    ACA <-->|"Policy Management & Telemetry"| SCM
-    ACA -->|"Model Inspection"| HF
-    ACA -->|"Model Inspection"| GL
+    ACA -->|"Scan Request (URI)"| MS
+    ACA <-->|"Policy Group Management"| SCM
+    
+    MS -->|"Model Inspection"| HF
+    MS -->|"Model Inspection"| GL
+    MS -->|"AI Supply Chain Scans"| SCM
 ```
 
 ---
