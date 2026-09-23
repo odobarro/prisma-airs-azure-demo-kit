@@ -56,3 +56,46 @@ Before running this deployment, ensure you have:
 8. **Vercel Account (Free/Hobby Tier)**: Required to deploy the Next.js frontend demo applications (Phase 3). Vercel's Edge infrastructure acts as the serverless host for our UI, securely proxying traffic to the Prisma AIRS Gateway without incurring additional cloud compute costs.
 
 ---
+
+
+graph LR
+    %% Definición de Estilos
+    classDef frontend fill:#000000,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef prisma fill:#05a6f0,stroke:#005279,stroke-width:2px,color:#fff;
+    classDef azure fill:#0078D4,stroke:#005A9E,stroke-width:2px,color:#fff;
+    classDef external fill:#fca311,stroke:#e5e5e5,stroke-width:1px,color:#000;
+
+    subgraph Capa_Consumo [1. Vercel - Capa de Aplicación / Edge]
+        R[Retail Web App]:::frontend
+        F[Finance Web App]:::frontend
+        M[Manufacturing Web App]:::frontend
+        S[SecOps Validation Hub]:::frontend
+    end
+
+    subgraph Capa_Seguridad [2. Palo Alto Networks - Prisma AIRS]
+        GW{AI Gateway}:::prisma
+        RT[Runtime API / Guardrails]:::prisma
+        RED[AI Red Teaming Module]:::prisma
+        SCM[(Strata Cloud Manager)]:::prisma
+    end
+
+    subgraph Capa_Infraestructura [3. Azure - Backend & AI Platform]
+        OAI[Azure OpenAI \n gpt-4.1-mini]:::azure
+        ACA[Azure Container Apps \n Model Scanner API]:::azure
+    end
+
+    subgraph Cadena_Suministro [4. Repositorios Externos]
+        HF((Hugging Face)):::external
+        GL((GitLab)):::external
+    end
+
+    %% Flujos de Runtime Security & Red Teaming
+    R & F & M -- "Inferencia (Prompts)" --> GW
+    RED -. "Ataques y Payloads" .-> GW
+    GW <-->|Evaluación de Riesgo / DLP| RT
+    GW -- "Tráfico Limpio" --> OAI
+
+    %% Flujos de SecOps (Model Security)
+    S -- "Llamada Zero-Trust" --> ACA
+    ACA <-->|Gestión de Grupos y Políticas| SCM
+    ACA -- "Inspección de Artefactos" --> HF & GL
