@@ -58,14 +58,13 @@ async def scan_endpoint(request: ScanRequest):
         if request.gitlab_token and "GITLAB_TOKEN" in os.environ:
             del os.environ["GITLAB_TOKEN"]
 
-# --- NUEVO ENDPOINT: Listar grupos para que el UI no se quede en blanco ---
+# --- ENDPOINT DE GRUPOS ACTUALIZADO: EXTRACCIÓN ROBUSTA DE TUPLAS ---
 @app.get("/api/v1/groups")
 async def list_groups_endpoint():
     logger.info("[+] Recuperando lista de Policy Groups desde SCM...")
     try:
         client = get_security_client()
         
-        # El SDK suele exponer list_security_groups o get_security_groups
         try:
             groups_data = client.list_security_groups()
         except AttributeError:
@@ -73,26 +72,33 @@ async def list_groups_endpoint():
             
         result = []
         
-        # Extracción segura: si el SDK devuelve una tupla anidada (ej: ( [Grupo1, Grupo2], status, headers ))
-        if isinstance(groups_data, tuple) and len(groups_data) > 0 and isinstance(groups_data[0], list):
+        # 1. Extracción hiper-robusta de la respuesta del SDK
+        if isinstance(groups_data, tuple) and len(groups_data) > 0:
+            # El SDK OpenAPI suele devolver (datos, status_code, headers)
             items_to_process = groups_data[0]
-        elif isinstance(groups_data, tuple):
-            items_to_process = groups_data
         else:
             items_to_process = groups_data
 
+        # 2. Por si los datos vienen paginados dentro de un atributo .data
+        if hasattr(items_to_process, 'data'):
+            items_to_process = items_to_process.data
+            
+        # 3. Asegurar que iteramos sobre una colección
+        if not isinstance(items_to_process, (list, tuple)):
+            items_to_process = [items_to_process]
+
         for g in items_to_process:
-            if isinstance(g, dict):
-                result.append({
-                    "name": g.get("name", "Unknown"),
-                    "uuid": str(g.get("uuid", "")),
-                    "provider": g.get("source_type", "S3")
-                })
-            elif hasattr(g, "uuid"):
+            if hasattr(g, "uuid"):
                 result.append({
                     "name": getattr(g, "name", "Unknown"),
                     "uuid": str(getattr(g, "uuid", "")),
                     "provider": getattr(g, "source_type", "S3")
+                })
+            elif isinstance(g, dict) and "uuid" in g:
+                result.append({
+                    "name": g.get("name", "Unknown"),
+                    "uuid": str(g.get("uuid", "")),
+                    "provider": g.get("source_type", "S3")
                 })
             else:
                 logger.warning(f"Formato de grupo ignorado al parsear: {type(g)}")
@@ -140,7 +146,6 @@ async def delete_group_endpoint(uuid: str):
     logger.info(f"[-] Eliminando Policy Group de SCM con UUID: {uuid}")
     try:
         client = get_security_client()
-        # FIX: Pasamos el UUID como argumento posicional para evitar el error de keyword
         client.delete_security_group(uuid)
         return {
             "uuid": uuid,
