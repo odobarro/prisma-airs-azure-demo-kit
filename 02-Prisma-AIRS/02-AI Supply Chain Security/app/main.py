@@ -58,50 +58,61 @@ async def scan_endpoint(request: ScanRequest):
         if request.gitlab_token and "GITLAB_TOKEN" in os.environ:
             del os.environ["GITLAB_TOKEN"]
 
-# --- ENDPOINT DE GRUPOS ACTUALIZADO: EXTRACCIÓN ROBUSTA DE TUPLAS ---
+# --- ENDPOINT DE GRUPOS ACTUALIZADO: EXTRACCIÓN DINÁMICA ---
 @app.get("/api/v1/groups")
 async def list_groups_endpoint():
     logger.info("[+] Recuperando lista de Policy Groups desde SCM...")
     try:
         client = get_security_client()
         
+        # Aplicamos los parámetros exactos de la CLI y SDK
         try:
-            groups_data = client.list_security_groups()
+            groups_data = client.list_security_groups(limit=50, skip=0)
         except AttributeError:
-            groups_data = client.get_security_groups()
+            groups_data = client.get_security_groups(limit=50, skip=0)
             
         result = []
+        items_to_process = []
         
-        # 1. Extracción hiper-robusta de la respuesta del SDK
-        if isinstance(groups_data, tuple) and len(groups_data) > 0:
-            # El SDK OpenAPI suele devolver (datos, status_code, headers)
-            items_to_process = groups_data[0]
-        else:
+        # Extracción a prueba de balas sin importar cómo anide el SDK los datos
+        if isinstance(groups_data, list):
             items_to_process = groups_data
-
-        # 2. Por si los datos vienen paginados dentro de un atributo .data
-        if hasattr(items_to_process, 'data'):
-            items_to_process = items_to_process.data
-            
-        # 3. Asegurar que iteramos sobre una colección
-        if not isinstance(items_to_process, (list, tuple)):
-            items_to_process = [items_to_process]
-
+        elif hasattr(groups_data, "data") and isinstance(groups_data.data, list):
+            items_to_process = groups_data.data
+        elif hasattr(groups_data, "items") and isinstance(groups_data.items, list):
+            items_to_process = groups_data.items
+        else:
+            # Si es un Pydantic Schema, volcamos a diccionario y buscamos la lista
+            try:
+                if hasattr(groups_data, "model_dump"):
+                    obj_dict = groups_data.model_dump()
+                elif hasattr(groups_data, "dict"):
+                    obj_dict = groups_data.dict()
+                else:
+                    obj_dict = dict(groups_data)
+                    
+                # Buscamos la primera lista de objetos en el payload
+                for val in obj_dict.values():
+                    if isinstance(val, list):
+                        items_to_process = val
+                        break
+            except Exception as parse_e:
+                logger.warning(f"Error parseando el schema a diccionario: {parse_e}")
+                
+        # Iteramos sobre la lista de grupos extraída y mapeamos al frontend
         for g in items_to_process:
-            if hasattr(g, "uuid"):
-                result.append({
-                    "name": getattr(g, "name", "Unknown"),
-                    "uuid": str(getattr(g, "uuid", "")),
-                    "provider": getattr(g, "source_type", "S3")
-                })
-            elif isinstance(g, dict) and "uuid" in g:
+            if isinstance(g, dict):
                 result.append({
                     "name": g.get("name", "Unknown"),
                     "uuid": str(g.get("uuid", "")),
                     "provider": g.get("source_type", "S3")
                 })
             else:
-                logger.warning(f"Formato de grupo ignorado al parsear: {type(g)}")
+                result.append({
+                    "name": getattr(g, "name", "Unknown"),
+                    "uuid": str(getattr(g, "uuid", "")),
+                    "provider": getattr(g, "source_type", "S3")
+                })
                 
         return result
     except Exception as e:
