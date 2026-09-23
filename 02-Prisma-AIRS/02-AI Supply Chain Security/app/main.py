@@ -66,20 +66,37 @@ async def list_groups_endpoint():
         client = get_security_client()
         
         # El SDK suele exponer list_security_groups o get_security_groups
-        # Usamos un try/except por si cambia la nomenclatura en tu versión exacta
         try:
             groups_data = client.list_security_groups()
         except AttributeError:
             groups_data = client.get_security_groups()
             
-        # Parseamos la respuesta de Prisma para el frontend
         result = []
-        for g in groups_data:
-            result.append({
-                "name": g.name if hasattr(g, 'name') else g.get('name', 'Unknown'),
-                "uuid": str(g.uuid) if hasattr(g, 'uuid') else str(g.get('uuid')),
-                "provider": g.source_type if hasattr(g, 'source_type') else "S3"
-            })
+        
+        # Extracción segura: si el SDK devuelve una tupla anidada (ej: ( [Grupo1, Grupo2], status, headers ))
+        if isinstance(groups_data, tuple) and len(groups_data) > 0 and isinstance(groups_data[0], list):
+            items_to_process = groups_data[0]
+        elif isinstance(groups_data, tuple):
+            items_to_process = groups_data
+        else:
+            items_to_process = groups_data
+
+        for g in items_to_process:
+            if isinstance(g, dict):
+                result.append({
+                    "name": g.get("name", "Unknown"),
+                    "uuid": str(g.get("uuid", "")),
+                    "provider": g.get("source_type", "S3")
+                })
+            elif hasattr(g, "uuid"):
+                result.append({
+                    "name": getattr(g, "name", "Unknown"),
+                    "uuid": str(getattr(g, "uuid", "")),
+                    "provider": getattr(g, "source_type", "S3")
+                })
+            else:
+                logger.warning(f"Formato de grupo ignorado al parsear: {type(g)}")
+                
         return result
     except Exception as e:
         logger.error(f"[!] Error al listar los Policy Groups en SCM: {str(e)}")
