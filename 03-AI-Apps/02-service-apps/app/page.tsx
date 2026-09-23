@@ -14,18 +14,14 @@ interface SourceCatalogItem {
   presetToken?: string;
 }
 
+// 1. ELIMINADOS LOS UUIDs HARDCODEADOS. El frontend nace limpio.
 const INITIAL_CATALOG: Record<string, SourceCatalogItem> = {
   HuggingFace: {
-    groups: [
-      { name: 'HuggingFace_Scan', uuid: 'a6be1f6f-4d8e-4f78-9ebf-7339d1646bb0' },
-      { name: 'Default HUGGING_FACE', uuid: '2baf2bc5-2ae2-42d6-a548-9af6a2cb4c32' }
-    ],
+    groups: [],
     presetUrl: 'https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf'
   },
   GitLab: {
-    groups: [
-      { name: 'GitLab_Scan', uuid: '17fdc41a-aae5-434d-a648-cd118679cc0e' }
-    ],
+    groups: [],
     presetUrl: 'https://gitlab.com/netsec-sc/airs-test/-/ml/models/3007547/versions/3019068',
     presetToken: 'glpat-XdfdIINaiQMLWLtbXMzD92M6MQpvOjEKdTpubjU1OA8.01.171hs2q0c'
   }
@@ -107,33 +103,35 @@ export default function SecurityHubPage() {
 
   const t = i18n[lang];
 
-  // Carga de grupos reales desde SCM al montar la página
+  // 2. SINCRONIZACIÓN DINÁMICA (Busting de Caché en Vercel)
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const res = await fetch('/api/groups', { cache: 'no-store' });
+        // El timestamp (?t=...) fuerza a Vercel a ignorar su caché y pedir datos frescos a Azure
+        const res = await fetch(`/api/groups?t=${new Date().getTime()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setCatalog(prev => {
               const updated = { ...prev };
-              
               const hfGroups: SecurityGroup[] = [];
               const glGroups: SecurityGroup[] = [];
 
+              // Clasificamos lo que viene de la nube
               data.forEach((g: any) => {
                 const item = { name: g.name, uuid: g.uuid };
                 const prov = String(g.provider || '').toUpperCase();
                 if (prov.includes('GITLAB')) {
                   glGroups.push(item);
                 } else {
-                  hfGroups.push(item);
+                  hfGroups.push(item); // S3 o HUGGING_FACE caen aquí
                 }
               });
 
-              if (hfGroups.length > 0) updated.HuggingFace.groups = hfGroups;
-              if (glGroups.length > 0) updated.GitLab.groups = glGroups;
+              // Asignamos directamente los arrays (aunque vengan vacíos, es la realidad de SCM)
+              updated.HuggingFace.groups = hfGroups;
+              updated.GitLab.groups = glGroups;
 
               return updated;
             });
@@ -149,16 +147,18 @@ export default function SecurityHubPage() {
     fetchGroups();
   }, []);
 
-  // Actualiza el ID seleccionado cuando cambia el catálogo o el proveedor
+  // 3. SELECCIÓN INTELIGENTE DEL DROPDOWN
   useEffect(() => {
-    if (catalog[source]?.groups.length > 0) {
-      setGroupId(catalog[source].groups[0].uuid);
+    const currentGroups = catalog[source]?.groups || [];
+    if (currentGroups.length > 0) {
+      // Si el ID actual no existe en la lista de este proveedor, seleccionamos el primero
+      if (!currentGroups.find(g => g.uuid === groupId)) {
+        setGroupId(currentGroups[0].uuid);
+      }
     } else {
       setGroupId('');
     }
-    setModelUrl('');
-    setPrivateToken('');
-  }, [source, catalog]);
+  }, [source, catalog, groupId]);
 
   const handleLoadPreset = () => {
     const catalogItem = catalog[source];
@@ -240,9 +240,6 @@ export default function SecurityHubPage() {
         return updated;
       });
       
-      if (groupId === groupUuid && catalog[groupType].groups.length > 0) {
-        setGroupId(catalog[groupType].groups[0].uuid);
-      }
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -326,22 +323,26 @@ export default function SecurityHubPage() {
             <div className="space-y-4">
               {managerLoading && <div className="text-xs text-cyan-500 animate-pulse">Sincronizando con SCM...</div>}
               {!managerLoading && (Object.keys(catalog) as ModelSource[]).map(type => (
-                <div key={type}>
+                <div key={type} className="mb-4 last:mb-0">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">{type}</span>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {catalog[type].groups.map(g => (
-                      <div key={g.uuid} className="flex items-center justify-between bg-[#0a0f18] border border-slate-800 p-3 rounded-lg">
-                        <span className="text-xs font-bold text-slate-300 truncate">{g.name}</span>
-                        <button 
-                          onClick={() => handleDeleteGroup(g.uuid, type)} 
-                          disabled={managerLoading}
-                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded transition-colors ml-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  {catalog[type].groups.length === 0 ? (
+                    <div className="text-xs text-slate-600 italic px-2">No hay grupos configurados.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {catalog[type].groups.map(g => (
+                        <div key={g.uuid} className="flex items-center justify-between bg-[#0a0f18] border border-slate-800 p-3 rounded-lg">
+                          <span className="text-xs font-bold text-slate-300 truncate">{g.name}</span>
+                          <button 
+                            onClick={() => handleDeleteGroup(g.uuid, type)} 
+                            disabled={managerLoading}
+                            className="text-slate-500 hover:text-rose-400 p-1.5 rounded transition-colors ml-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -365,8 +366,12 @@ export default function SecurityHubPage() {
                  <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> {t.groupLabel}
                  </label>
-                 <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={loading || managerLoading} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-indigo-500 outline-none appearance-none">
-                   {catalog[source].groups.map(g => <option key={g.uuid} value={g.uuid}>{g.name}</option>)}
+                 <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={loading || managerLoading || catalog[source]?.groups.length === 0} className="w-full bg-[#0a0f18] border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-300 focus:border-indigo-500 outline-none appearance-none">
+                   {catalog[source]?.groups.length === 0 ? (
+                     <option value="">-- Crea un grupo primero --</option>
+                   ) : (
+                     catalog[source].groups.map(g => <option key={g.uuid} value={g.uuid}>{g.name}</option>)
+                   )}
                  </select>
                </div>
             </div>
@@ -394,7 +399,7 @@ export default function SecurityHubPage() {
               </div>
             )}
 
-            <button type="submit" disabled={loading || managerLoading} className="w-full bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 disabled:from-slate-800 text-white font-bold py-3.5 px-6 rounded-lg transition-all flex items-center justify-center gap-2 mt-4 shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:-translate-y-0.5">
+            <button type="submit" disabled={loading || managerLoading || !groupId} className="w-full bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 disabled:from-slate-800 text-white font-bold py-3.5 px-6 rounded-lg transition-all flex items-center justify-center gap-2 mt-4 shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:-translate-y-0.5">
               {loading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Terminal className="w-4 h-4" />}
               {loading ? t.scanning : t.scanBtn}
             </button>
