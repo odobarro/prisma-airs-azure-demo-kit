@@ -24,19 +24,29 @@ graph LR
         F["Finance Web App"]:::frontend
         M["Manufacturing Web App"]:::frontend
         S["SecOps AI Supply Chain Security"]:::frontend
+        
+        %% Forzar orden vertical en Vercel
+        R ~~~ F ~~~ M ~~~ S
     end
 
     subgraph Security_Layer ["2. Palo Alto Networks - Prisma AIRS"]
+        RED["AI Red Teaming Module"]:::prisma
         GW{"AI Gateway"}:::prisma
         RT["Runtime API (Guardrails)"]:::prisma
-        RED["AI Red Teaming Module"]:::prisma
         MS["Model Security Engine"]:::prisma
         SCM[("Strata Cloud Manager")]:::prisma
+        
+        %% Aislar la capa de Inferencia de la capa SecOps
+        RT ~~~ MS
+        MS ~~~ SCM
     end
 
     subgraph Infrastructure_Layer ["3. Azure - Backend & AI Platform"]
         OAI["Azure OpenAI <br/> gpt-4.1-mini"]:::azure
         ACA["Azure Container Apps <br/> API Proxy"]:::azure
+        
+        %% Separar IA Generativa del proxy de escaneo
+        OAI ~~~ ACA
     end
 
     subgraph Supply_Chain ["4. External Repositories"]
@@ -44,16 +54,20 @@ graph LR
         GL(("GitLab")):::external
     end
 
-    %% Runtime Security & Red Teaming Flows
+    %% ==========================================
+    %% 🔴 FLUJOS DE RUNTIME SECURITY (INFERENCIA)
+    %% ==========================================
     R -->|"Inference"| GW
     F -->|"Inference"| GW
     M -->|"Inference"| GW
     RED -.->|"Attacks / Payloads"| GW
     
-    GW <-->|"Runtime Security"| RT
+    GW <-->|"Prompt & Response Inspection"| RT
     GW -->|"Clean Traffic"| OAI
 
-    %% SecOps (Model Security) Flows
+    %% ==========================================
+    %% 🔵 FLUJOS DE SECOPS (SUPPLY CHAIN)
+    %% ==========================================
     S -->|"Backend Connection"| ACA
     ACA -->|"Scan Request (URI)"| MS
     ACA <-->|"Policy Group Management"| SCM
