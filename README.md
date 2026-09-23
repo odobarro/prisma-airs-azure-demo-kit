@@ -4,13 +4,6 @@ An automated, enterprise-grade Infrastructure-as-Code (IaC) package using **Terr
 
 Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilities like **AI Gateway**, **AI Runtime Security**, **AI Supply Chain Security**, **AI RedTeaming**, ...
 
----
-
-## Architecture
-
-* **Azure OpenAI Service**: Deploys `gpt-4.1-mini`.
-* **Azure Storage Account (`Standard_LRS`)**: Dedicated Blob Storage container for AI model vulnerability scanning (`.pkl`, `.safetensors`, `.onnx` files) via **Prisma Model Security**.
-
 ```mermaid
 graph LR
     %% Styling Definitions (Palo Alto, Azure, and Vercel Colors)
@@ -76,6 +69,15 @@ graph LR
     MS -->|"Model Inspection"| GL
     MS -->|"AI Supply Chain Scans"| SCM
 ```
+
+---
+
+## Architecture
+
+* **Azure OpenAI Service**: Deploys `gpt-4.1-mini`.
+* **Azure Storage Account (`Standard_LRS`)**: Dedicated Blob Storage container for AI model vulnerability scanning (`.pkl`, `.safetensors`, `.onnx` files) via **Prisma Model Security**.
+
+
 
 ---
 
