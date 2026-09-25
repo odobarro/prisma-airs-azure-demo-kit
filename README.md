@@ -4,6 +4,8 @@ An automated, enterprise-grade Infrastructure-as-Code (IaC) package using **Terr
 
 Purpose-built for demonstrating **Palo Alto Networks Prisma AIRS** capabilities like **AI Gateway**, **AI Runtime Security**, **AI Supply Chain Security**, **AI RedTeaming**, ...
 
+<img src="./images/General_Image.jpeg" alt="Custom Role Permissions SCM" width="750"/>
+
 ```mermaid
 graph LR
     %% Styling Definitions (Palo Alto, Azure, and Vercel Colors)
