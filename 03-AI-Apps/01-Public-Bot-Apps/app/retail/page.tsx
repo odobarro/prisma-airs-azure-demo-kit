@@ -37,7 +37,7 @@ export default function RetailPage() {
   // Multilingual UI Dictionary Matrix
   const t = {
     es: {
-      brand: "🛒 NovaRetail Store",
+      brand: "🛒 NovaRetail Store1",
       newArrivals: "Novedades",
       deals: "Ofertas",
       support: "Soporte",
