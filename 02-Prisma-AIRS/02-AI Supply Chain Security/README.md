@@ -294,7 +294,7 @@ While you can interact with the Prisma AIRS scanning backend via standard APIs (
 
 This Next.js portal provides a visual dashboard to trigger audits, inspect results, and dynamically manage SCM Policy Groups without interacting directly with the backend infrastructure.
 
-👉 **[Deploy the SecOps Model Validation Hub](../../02-service-apps)**
+👉 **[Deploy the SecOps Model Validation Hub](../../03-AI-Apps/02-Service-Apps)**
 
 ---
 
