@@ -311,5 +311,5 @@ This Next.js portal provides a visual dashboard to trigger audits, inspect resul
 Model & Skill Supply Chain Security represents the **Pre-Deployment / Static Guardrail** layer within the broader Palo Alto Networks AI Ecosystem:
 * **Prisma AIRS (Supply Chain Security)**: Validates AI artifacts (GGUF, Safetensors, Pickle, Skill definitions) before they enter CI/CD pipelines or AI registries.
 * **Prisma AIRS AI Gateway & Runtime Security**: Intercepts real-time LLM inference requests, enforcing DLP, prompt injection defense, and toxicity filtering.
-* **Portkey & Idira Integration**: Works alongside AI gateways and orchestration proxies to provide end-to-end observability, fallback routing, and real-time governance across multi-LLM enterprise deployments.
+* **AI GW **: Works alongside AI gateways and orchestration proxies to provide end-to-end observability, fallback routing, and real-time governance across multi-LLM enterprise deployments.
 
