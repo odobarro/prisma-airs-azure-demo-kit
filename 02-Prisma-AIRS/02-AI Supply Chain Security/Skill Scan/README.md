@@ -61,7 +61,7 @@ Upon completion, the skill's status will automatically update to reflect the vul
 
 ---
 
-## 🛡️ HScanning a Safe, Enterprise-Ready Skill
+## 🛡️ Scanning a Safe, Enterprise-Ready Skill
 
 To demonstrate how Prisma AIRS processes a secure, well-architected skill, we will use an official Palo Alto Networks integration example. We will download the repository, extract a specific skill, compress it, and upload it for scanning to observe a successful validation.
 
